@@ -1,4 +1,4 @@
-excluded_elements = ["delete_session_button"]
+excluded_elements = ["delete_session_button", "theme_toggle_button"]
 
 
 # Function to recursively iterate through all children of a widget

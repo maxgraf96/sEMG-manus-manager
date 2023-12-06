@@ -14,19 +14,22 @@ class Sidebar(tk.Frame):
         self.create_widgets()
 
         self.pack_configure(padx=(10, 0), pady=10, fill=tk.Y)
+        # Set the width of the sidebar to 200px
+        self.pack_propagate(False)
+        self.config(width=250)
 
     def create_widgets(self):
         self.label = tk.Label(self, text="Users", font=(FONT, 14), bg=self.parent.colour_config["bg"], fg=self.parent.colour_config["fg"])
         self.label.pack()
 
         self.add_user_button = tk.Button(self, text="Add New User", command=self.add_new_user, bg=self.parent.colour_config["bg"],
-                                         fg=self.parent.colour_config["fg"])
+                                         fg=self.parent.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
         self.add_user_button.pack(side=tk.BOTTOM, pady=(10, 0))
         # Add top and bottom padding to the button
         self.add_user_button.pack_configure(fill=tk.X)
 
         self.listbox = tk.Listbox(self, fg=self.parent.colour_config["fg"], bg=self.parent.colour_config["bg"], selectbackground='grey', selectforeground='white',
-                                  highlightthickness=1, highlightbackground='grey')
+                                  highlightthickness=0, highlightbackground='grey', relief=tk.RIDGE, borderwidth=1)
         self.listbox.pack(fill=tk.BOTH, expand=True)
 
         # Load users and populate the listbox

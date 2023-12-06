@@ -24,18 +24,26 @@ class SessionDetail(tk.Frame):
                                              bg=self.root.colour_config["bg"],
                                              selectbackground='grey',
                                              selectforeground='white',
-                                             highlightthickness=1, highlightbackground='grey')
+                                             highlightthickness=0, highlightbackground='grey',
+                                             relief=tk.RIDGE, borderwidth=1)
         self.recordings_listbox.pack(fill=tk.BOTH)
 
         # Load recordings for this session
         self.load_recordings()
 
         self.new_recording_button = tk.Button(self, text="Start New Recording", command=self.start_new_recording,
-                                              bg=self.root.colour_config["bg"], fg=self.root.colour_config["fg"])
+                                              bg=self.root.colour_config["bg"], fg=self.root.colour_config["fg"],
+                                              relief=tk.RIDGE, borderwidth=1)
         # New recording button should be 200px wide and left-aligned
         self.new_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
 
-        self.delete_session_button = tk.Button(self, name="delete_session_button", text="x", command=self.delete_session, bg='darkred', fg='white')
+        self.delete_session_button = tk.Button(self,
+                                               name="delete_session_button",
+                                               text="x",
+                                               command=self.delete_session,
+                                               bg='darkred',
+                                               fg='white',
+                                               relief=tk.RIDGE, borderwidth=1)
         self.delete_session_button.pack_configure(side=RIGHT, ipadx=10, pady=(5, 0))
 
     def load_recordings(self):

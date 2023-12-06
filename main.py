@@ -1,7 +1,9 @@
 import os
+
 import tkinter as tk
 from tkinter import ttk
 from components.VerticallyScrolledFrame import VerticalScrolledFrame
+from PIL import ImageTk, Image
 
 import ctypes
 
@@ -18,6 +20,7 @@ class App(tk.Tk):
         super().__init__()
 
         self.title('sEMG Manus Manager')
+        self.iconbitmap('resources/tap.ico')
         self.geometry("1300x800")
         self.configure(bg=BG_COLOUR_LIGHT)  # Set the background color of the main window
         # Add state variable for theme
@@ -25,6 +28,8 @@ class App(tk.Tk):
         self.colour_config = {
             "bg": BG_COLOUR_LIGHT,
             "fg": FG_COLOUR_LIGHT,
+            # border colour
+            "bc": "grey",
         }
 
         self.create_status_bar()
@@ -38,14 +43,22 @@ class App(tk.Tk):
         self.detail_frame.pack(fill=tk.BOTH, expand=True)
 
     def create_status_bar(self):
-        self.status_bar = tk.Frame(self, height=32, bg='grey')  # Create a frame for the status bar
+        self.status_bar = tk.Frame(self, height=36, bg='grey')  # Create a frame for the status bar
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)  # Attach the status bar to the bottom
         self.status_bar.pack_propagate(False)  # Prevent the status bar from resizing
 
         self.status_label = tk.Label(self.status_bar, text="Waiting for Manus connection...", bg='grey', anchor='e')
         self.status_label.pack(side=tk.RIGHT, padx=10)
 
-        self.theme_toggle_button = ttk.Button(self.status_bar, text="Light/Dark", command=self.toggle_theme)
+        # Load the ico file
+        photo_image = ImageTk.PhotoImage(file="resources/day-and-night.ico")
+        # Create the button and set the image
+        # self.theme_toggle_button = tk.Button(image=photo_image, width=79, height=79)
+
+        self.theme_toggle_button = tk.Button(self.status_bar, image=photo_image, name="theme_toggle_button",
+                                             command=self.toggle_theme, bg='grey', borderwidth=0, width=24, height=24)
+        self.theme_toggle_button.image = photo_image
+
         self.theme_toggle_button.pack(side=tk.LEFT, padx=10)
 
     def load_user_data(self, user_id):
@@ -70,8 +83,8 @@ class App(tk.Tk):
         # Add New Session button
         new_session_button = tk.Button(self.detail_frame.interior, text="Add New Session",
                                        command=lambda: self.create_new_session(user_id), bg=self.colour_config["bg"],
-                                       fg=self.colour_config["fg"])
-        new_session_button.pack(pady=10)
+                                       fg=self.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
+        new_session_button.pack(ipadx=20, pady=10)
 
     def create_new_session(self, user_id):
         user_folder = os.path.join('user_data', f'u_{user_id}')
@@ -102,6 +115,7 @@ class App(tk.Tk):
             self.colour_config = {
                 "bg": BG_COLOUR_LIGHT,
                 "fg": FG_COLOUR_LIGHT,
+
             }
 
         bg = self.colour_config["bg"]
