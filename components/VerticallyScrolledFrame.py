@@ -2,7 +2,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter.constants import *
 
-from config import BG_COLOUR
+from config import BG_COLOUR_LIGHT
 
 
 class VerticalScrolledFrame(ttk.Frame):
@@ -19,7 +19,7 @@ class VerticalScrolledFrame(ttk.Frame):
         vscrollbar = ttk.Scrollbar(self, orient=VERTICAL)
         vscrollbar.pack(fill=Y, side=RIGHT, expand=FALSE)
         self.canvas = tk.Canvas(self, bd=0, highlightthickness=0,
-                                yscrollcommand=vscrollbar.set, bg=BG_COLOUR)
+                                yscrollcommand=vscrollbar.set, bg=BG_COLOUR_LIGHT)
         self.canvas.pack(side=LEFT, fill=BOTH, expand=TRUE)
         vscrollbar.config(command=self.canvas.yview)
 
@@ -28,7 +28,7 @@ class VerticalScrolledFrame(ttk.Frame):
         self.canvas.yview_moveto(0)
 
         # Create a frame inside the canvas which will be scrolled with it.
-        self.interior = interior = tk.Frame(self.canvas, bg=BG_COLOUR)
+        self.interior = interior = tk.Frame(self.canvas, bg=BG_COLOUR_LIGHT)
         interior_id = self.canvas.create_window(0, 0, window=interior,
                                                 anchor=NW)
 
