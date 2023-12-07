@@ -67,13 +67,9 @@ class GestureDetail(tk.Frame):
             # Extract the filename
             filename = recording_file.split('.csv')[0]
 
-            # Get the recording date and time from the filename
-            # This assumes the filename format is recording_<date_time>.csv
-            date_time = filename.split('_')[1]
-
             # Add the recording information to the listbox
             # You can modify this to display additional information from the CSV file
-            self.recordings_listbox.insert(tk.END, f"{date_time} - {filename}")
+            self.recordings_listbox.insert(tk.END, f"{filename}")
 
         # Bind double-click event to open the selected recording
         self.recordings_listbox.bind(
@@ -89,7 +85,7 @@ class GestureDetail(tk.Frame):
         # Get the session folder path
         session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
         # Get the selected filename
-        selected_filename = self.recordings_listbox.get(selected_index[0]).split(' - ')[1] + '.csv'
+        selected_filename = self.recordings_listbox.get(selected_index[0]) + '.csv'
         # Open the selected recording file
         os.startfile(os.path.join(session_folder, selected_filename))
 
@@ -131,7 +127,7 @@ class GestureDetail(tk.Frame):
         q_terminate.put(True)
 
         # Generate a unique filename for the recording
-        now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        now = datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
         recording_filename = f"recording_{now}.csv"
         # Get the session folder path
         session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
@@ -150,7 +146,7 @@ class GestureDetail(tk.Frame):
         # Get selected item index
         selected_index = self.recordings_listbox.curselection()
         if selected_index:
-            selected_filename = self.recordings_listbox.get(selected_index[0]).split(' - ')[1] + '.csv'
+            selected_filename = self.recordings_listbox.get(selected_index[0]) + '.csv'
             # Ask for confirmation
             if msgbox.askyesno("Delete recording for gesture", f"Are you sure you want to delete recording {selected_filename}?"):
                 # Delete the csv file
