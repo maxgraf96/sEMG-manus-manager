@@ -33,7 +33,7 @@ class SessionDetail(tk.Frame):
         self.delete_session_button.pack_configure(side=RIGHT, ipadx=10, pady=(0, 0))
 
         # Create two frames for the two columns
-        left_frame = tk.Frame(self, bg=self.root.colour_config["bg"])
+        left_frame = tk.Frame(self, name="testoo", bg=self.root.colour_config["bg"])
         right_frame = tk.Frame(self, bg=self.root.colour_config["bg"])
 
         # Pack the frames side by side

@@ -118,18 +118,10 @@ class App(tk.Tk):
             }
 
         bg = self.colour_config["bg"]
-        fg = self.colour_config["fg"]
 
+        # Configure all widgets recursively
         configure_recursively(self, self.colour_config)
 
-        # Configure dark theme
-        self.configure(bg=bg)
-        self.sidebar.configure(bg=bg)
-        configure_recursively(self.sidebar, self.colour_config)
-
-        self.detail_frame.interior.configure(bg=bg)
-        for sessions in self.detail_frame.interior.winfo_children():
-            sessions.configure(bg=bg)
         self.detail_frame.canvas.configure(bg=bg)
         self.status_bar.configure(bg='grey')
         self.status_label.configure(bg='grey', fg='black')
