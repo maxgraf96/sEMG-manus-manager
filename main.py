@@ -47,18 +47,17 @@ class App(tk.Tk):
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)  # Attach the status bar to the bottom
         self.status_bar.pack_propagate(False)  # Prevent the status bar from resizing
 
+        # MANUS status label
         self.status_label = tk.Label(self.status_bar, text="Waiting for Manus connection...", bg='grey', anchor='e')
         self.status_label.pack(side=tk.RIGHT, padx=10)
 
+        # Light/dark theme toggle button
         # Load the ico file
         photo_image = ImageTk.PhotoImage(file="resources/day-and-night.ico")
         # Create the button and set the image
-        # self.theme_toggle_button = tk.Button(image=photo_image, width=79, height=79)
-
         self.theme_toggle_button = tk.Button(self.status_bar, image=photo_image, name="theme_toggle_button",
                                              command=self.toggle_theme, bg='grey', borderwidth=0, width=24, height=24)
         self.theme_toggle_button.image = photo_image
-
         self.theme_toggle_button.pack(side=tk.LEFT, padx=10)
 
     def load_user_data(self, user_id):

@@ -1,8 +1,14 @@
+import multiprocessing
 import os
+import time
 import tkinter as tk
 import tkinter.messagebox as msgbox
 from tkinter import LEFT, RIGHT
+import datetime
 
+import numpy as np
+
+from myo.data_collection import start_recording
 from config import FONT
 
 
@@ -12,6 +18,7 @@ class SessionDetail(tk.Frame):
         self.user_id = user_id
         self.session_id = session_id
         self.root = root
+        self.is_recording = False
 
         self.create_widgets()
         self.pack_configure(padx=10, pady=10, fill=tk.BOTH, expand=True)
@@ -93,31 +100,56 @@ class SessionDetail(tk.Frame):
         os.startfile(os.path.join(session_folder, selected_filename))
 
     def start_new_recording(self):
+        q_result = multiprocessing.Queue()
+        # Helper q to terminate the recording
+        q_terminate = multiprocessing.Queue()
+        # Helper q to check if the myo is ready
+        # Only when the myo is ready, the recording will start
+        q_myo_ready = multiprocessing.Queue()
+
+        # Start a new recording
+        start_recording(q_result, q_terminate, q_myo_ready)
+
+        # Record for 5 seconds
+        should_stop_recording = False
+        recording = []
+        while q_myo_ready.empty():
+            time.sleep(0.01)
+
+        timer = time.time()
+        while not should_stop_recording:
+            while not q_result.empty():
+                emg = q_result.get()
+                # Convert the data to a flat list
+                emg_flat = [float(item) for item in emg]
+                # recording.append(emg_flat.copy())
+                print(emg_flat)
+                recording.append(emg_flat.copy())
+
+                if time.time() - timer > 5:
+                    should_stop_recording = True
+
+                now = time.time()
+            else:
+                time.sleep(0.001)
+
+        # Terminate the recording
+        q_terminate.put(True)
+
         # Generate a unique filename for the recording
-        import datetime
         now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         recording_filename = f"recording_{now}.csv"
-
         # Get the session folder path
         session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}')
-
         # Create the recording file
         recording_path = os.path.join(session_folder, recording_filename)
-        with open(recording_path, 'w') as recording_file:
-            # Generate dummy data and write it to the file
-            # You can use a library like Faker or a custom function to generate realistic data
-            for i in range(100):
-                # Generate dummy data for timestamp, channels, etc.
-                timestamp = "2023-12-06 14:45:00.000"
-                channels = [str(value) for value in [i, i + 1, i + 2]]
-                data = ";".join([timestamp] + channels)
-                recording_file.write(f"{data}\n")
+        np.savetxt(recording_path, np.array(recording, dtype=float), delimiter=",")
 
         # Update the recordings listbox
         self.load_recordings()
 
         # Display a confirmation message
-        msgbox.showinfo("Recording Started", f"Recording saved as {recording_filename}")
+        msgbox.showinfo("Recording Finished", f"Recording saved as {recording_filename}")
 
     def delete_session(self):
         # Ask for confirmation
