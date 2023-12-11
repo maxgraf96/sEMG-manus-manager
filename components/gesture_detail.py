@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import signal
 import subprocess
 import time
 import tkinter as tk
@@ -31,16 +32,21 @@ browser_frame = None
 
 def visualiser_process(q):
     # Run the visualiser: the command is 'npx vite' and the working directory is the visualiser path
-    proc = subprocess.Popen(['npx.cmd', 'vite'], cwd=VISUALISER_PATH)
+    proc = subprocess.Popen(['npx.cmd', 'vite'],
+                            cwd=VISUALISER_PATH,
+                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                            )
 
     # Wait for the visualiser to be ready
     while q.empty():
         time.sleep(0.5)
 
-    proc.terminate()
-    time.sleep(0.5)
-    if proc.poll() is None:
-        proc.kill()
+    # Send ctrl+c and y to the visualiser process
+    proc.send_signal(signal.CTRL_BREAK_EVENT)
+    time.sleep(0.1)
+
+    proc.kill()
+
     return
 
 
@@ -156,7 +162,6 @@ class GestureDetail(tk.Frame):
             filename = self.recordings_listbox.get(self.recordings_listbox.curselection()[0]) + '.csv'
             print(f"Visualiser already running, piping new file {filename}.")
             # TODO update this with the actual hand data
-            # q_visualiser.put(filename)
         else:
             print("No visualiser process running, starting a new one.")
             p_visualiser = multiprocessing.Process(target=visualiser_process,

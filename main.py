@@ -1,4 +1,5 @@
 import os
+import time
 
 import tkinter as tk
 from tkinter import ttk
@@ -134,7 +135,7 @@ class App(tk.Tk):
         cef.Shutdown()
         q_visualiser.put("terminate")
         if p_visualiser is not None:
-            p_visualiser.terminate()
+            p_visualiser.wait()
         self.destroy()
 
 
