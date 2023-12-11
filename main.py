@@ -4,9 +4,11 @@ import tkinter as tk
 from tkinter import ttk
 from components.VerticallyScrolledFrame import VerticalScrolledFrame
 from PIL import ImageTk, Image
+from cefpython3 import cefpython as cef
 
 import ctypes
 
+from components.gesture_detail import p_visualiser, q_visualiser
 from components.session_detail import SessionDetail
 from components.sidebar import Sidebar
 from config import FONT, BG_COLOUR_LIGHT, FG_COLOUR_LIGHT, BG_COLOUR_DARK, FG_COLOUR_DARK
@@ -34,6 +36,8 @@ class App(tk.Tk):
 
         self.create_status_bar()
         self.create_widgets()
+
+        cef.Initialize()
 
     def create_widgets(self):
         self.sidebar = Sidebar(self, self.load_user_data)
@@ -126,7 +130,15 @@ class App(tk.Tk):
         self.status_bar.configure(bg='grey')
         self.status_label.configure(bg='grey', fg='black')
 
+    def on_close(self):
+        cef.Shutdown()
+        q_visualiser.put("terminate")
+        if p_visualiser is not None:
+            p_visualiser.terminate()
+        self.destroy()
+
 
 if __name__ == '__main__':
     app = App()
+    app.protocol("WM_DELETE_WINDOW", app.on_close)
     app.mainloop()

@@ -4,16 +4,44 @@ import subprocess
 import time
 import tkinter as tk
 import tkinter.messagebox as msgbox
+import webbrowser
 from tkinter import LEFT, RIGHT
 import datetime
 
 import numpy as np
 import send2trash
 
+from components.browser import BrowserFrame
 from myo.data_collection import start_recording
-from config import FONT
+from config import FONT, VISUALISER_PATH
 
 GESTURES = ['fist', 'wave_in', 'wave_out', 'fingers_spread', 'double_tap']
+
+# Visualiser setup -> that's the Three.js app
+# Queue for interacting with the visualiser
+q_visualiser = multiprocessing.Queue()
+# Visualiser process
+p_visualiser = None
+
+# Browser setup
+is_browser_open = False
+browser_window = None
+browser_frame = None
+
+
+def visualiser_process(q):
+    # Run the visualiser: the command is 'npx vite' and the working directory is the visualiser path
+    proc = subprocess.Popen(['npx.cmd', 'vite'], cwd=VISUALISER_PATH)
+
+    # Wait for the visualiser to be ready
+    while q.empty():
+        time.sleep(0.5)
+
+    proc.terminate()
+    time.sleep(0.5)
+    if proc.poll() is None:
+        proc.kill()
+    return
 
 
 class GestureDetail(tk.Frame):
@@ -30,7 +58,7 @@ class GestureDetail(tk.Frame):
         # Create a context menu
         self.context_menu = tk.Menu(root, tearoff=0)
         self.context_menu.add_command(label="Show in Explorer", command=self.show_in_explorer)
-        self.context_menu.add_command(label="Option 2")
+        self.context_menu.add_command(label="Show Visualisation", command=self.show_visualisation)
 
     def on_right_click(self, event):
         # Get the index of the item under the cursor
@@ -111,10 +139,82 @@ class GestureDetail(tk.Frame):
 
         # Bind double-click event to open the selected recording
         self.recordings_listbox.bind(
-            "<Double-Button-1>", lambda event: self.open_selected_recording()
+            "<Double-Button-1>", lambda event: self.show_visualisation()
+            # "<Double-Button-1>", lambda event: self.open_selected_recording()
         )
 
+    def show_visualisation(self):
+        """
+        Show the visualisation for the selected recording
+        :return:
+        """
+
+        global p_visualiser, is_browser_open, q_visualiser
+        # Check if the visualiser process is already running
+        if p_visualiser is not None:
+            # Pipe the filename to the visualiser
+            filename = self.recordings_listbox.get(self.recordings_listbox.curselection()[0]) + '.csv'
+            print(f"Visualiser already running, piping new file {filename}.")
+            # TODO update this with the actual hand data
+            # q_visualiser.put(filename)
+        else:
+            print("No visualiser process running, starting a new one.")
+            p_visualiser = multiprocessing.Process(target=visualiser_process,
+                                               args=(q_visualiser,))
+            p_visualiser.start()
+
+        if not is_browser_open:
+            # Open the visualiser in a new browser window
+            self.open_browser_window("http://localhost:5173")
+            # Set the flag to indicate that the browser window is open
+            is_browser_open = True
+        else:
+            # Refresh the visualiser
+            # TODO
+            return
+
+    def on_browser_window_close(self):
+        global is_browser_open, browser_window, browser_frame
+        if browser_frame:
+            browser_frame.on_root_close()
+            browser_frame = None
+        if browser_window:
+            browser_window.destroy()
+            browser_window = None
+
+        # Reset the flag to indicate that the browser window is closed
+        is_browser_open = False
+
+    def open_browser_window(self, url):
+        # Create a new top-level window
+        global browser_window, browser_frame
+        browser_window = tk.Toplevel()
+        browser_window.title("Hand Visualiser")
+        browser_window.minsize(800, 600)
+
+        # Create a WebFrame in the new window
+        browser_window.grid_columnconfigure(0, weight=1)
+        browser_window.grid_rowconfigure(0, weight=1)
+
+        # Create Frame
+        frame = tk.Frame(browser_window, bg='black')
+        frame.grid(row=0, column=0, sticky=('NSWE'))
+
+        # Create Browser Frame
+        browser_frame = BrowserFrame(frame)
+        browser_frame.pack(fill=tk.BOTH, expand=tk.YES)
+
+        # add callback for when the window is closed
+        browser_window.protocol("WM_DELETE_WINDOW", lambda: self.on_browser_window_close())
+
+        # Load the URL
+        browser_frame.embed_browser(url)
+
     def open_selected_recording(self):
+        """
+        Open the selected recording in the default application (Excel)
+        :return:
+        """
         # Get the selected recording index
         selected_index = self.recordings_listbox.curselection()
         # Check if a recording is selected
