@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+import subprocess
 import time
 import tkinter as tk
 import tkinter.messagebox as msgbox
@@ -25,6 +26,41 @@ class GestureDetail(tk.Frame):
         self.create_widgets()
         self.pack_configure(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
+        # Create a context menu
+        self.context_menu = tk.Menu(root, tearoff=0)
+        self.context_menu.add_command(label="Show in Explorer", command=self.show_in_explorer)
+        self.context_menu.add_command(label="Option 2")
+
+    def on_right_click(self, event):
+        # Get the index of the item under the cursor
+        try:
+            index = self.recordings_listbox.nearest(event.y)
+            self.recordings_listbox.select_clear(0, tk.END)
+            self.recordings_listbox.select_set(index)
+        except Exception as e:
+            print(e)
+            return
+
+        # Show the context menu
+        self.context_menu.post(event.x_root, event.y_root)
+
+    def show_in_explorer(self):
+        # Get the selected recording index
+        selected_index = self.recordings_listbox.curselection()
+        # Check if a recording is selected
+        if not selected_index:
+            return
+        # Get the session folder path
+        session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
+        # Get the selected filename
+        selected_filename = self.recordings_listbox.get(selected_index[0]) + '.csv'
+        # Create full path
+        selected_filename = os.path.join(session_folder, selected_filename)
+        # Normalize the file path
+        normalized_path = os.path.normpath(selected_filename)
+        # Open the file location in Windows Explorer
+        subprocess.run(['explorer', '/select,', normalized_path])
+
     def create_widgets(self):
         tk.Label(self, text=f"Gesture {self.gesture}", font=(FONT, 14), bg=self.root.colour_config["bg"], fg=self.root.colour_config["fg"]).pack()
 
@@ -37,6 +73,7 @@ class GestureDetail(tk.Frame):
                                              relief=tk.RIDGE, borderwidth=1)
         self.recordings_listbox.pack(fill=tk.BOTH)
         self.recordings_listbox.bind("<Delete>", self.delete_recording_listbox)
+        self.recordings_listbox.bind("<Button-3>", self.on_right_click)
 
         # Load sessions for this gesture
         self.load_recordings()
