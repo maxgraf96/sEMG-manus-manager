@@ -4,6 +4,8 @@ import tkinter as tk
 import tkinter.messagebox as msgbox
 from tkinter import RIGHT
 
+import send2trash
+
 from components.gesture_detail import GESTURES, GestureDetail
 from config import FONT
 
@@ -58,8 +60,7 @@ class SessionDetail(tk.Frame):
             # Delete the session folder
             session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}')
             if os.path.exists(session_folder):
-                import shutil
-                shutil.rmtree(session_folder)
+                send2trash.send2trash(session_folder)
 
             # Refresh the user data view
             self.root.load_user_data(self.root.sidebar.listbox.curselection()[0])

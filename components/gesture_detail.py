@@ -8,6 +8,7 @@ from tkinter import LEFT, RIGHT
 import datetime
 
 import numpy as np
+import send2trash
 
 from myo.data_collection import start_recording
 from config import FONT
@@ -188,7 +189,8 @@ class GestureDetail(tk.Frame):
             if msgbox.askyesno("Delete recording for gesture", f"Are you sure you want to delete recording {selected_filename}?"):
                 # Delete the csv file
                 session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
-                os.remove(os.path.join(session_folder, selected_filename))
+                send2trash.send2trash(os.path.join(session_folder, selected_filename))
+                # os.remove(os.path.join(session_folder, selected_filename))
 
                 # Delete the selected item from listbox
                 self.recordings_listbox.delete(selected_index[0])
