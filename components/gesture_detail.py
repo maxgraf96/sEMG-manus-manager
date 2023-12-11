@@ -97,7 +97,8 @@ class GestureDetail(tk.Frame):
         subprocess.run(['explorer', '/select,', normalized_path])
 
     def create_widgets(self):
-        tk.Label(self, text=f"Gesture {self.gesture}", font=(FONT, 14), bg=self.root.colour_config["bg"], fg=self.root.colour_config["fg"]).pack()
+        tk.Label(self, text=f"Gesture {self.gesture}", font=(FONT, 14), bg=self.root.colour_config["bg"],
+                 fg=self.root.colour_config["fg"]).pack()
 
         self.recordings_listbox = tk.Listbox(self, height=7,
                                              fg=self.root.colour_config["fg"],
@@ -155,7 +156,7 @@ class GestureDetail(tk.Frame):
         :return:
         """
 
-        global p_visualiser, is_browser_open, q_visualiser
+        global p_visualiser, q_visualiser, is_browser_open
         # Check if the visualiser process is already running
         if p_visualiser is not None:
             # Pipe the filename to the visualiser
@@ -165,7 +166,7 @@ class GestureDetail(tk.Frame):
         else:
             print("No visualiser process running, starting a new one.")
             p_visualiser = multiprocessing.Process(target=visualiser_process,
-                                               args=(q_visualiser,))
+                                                   args=(q_visualiser,))
             p_visualiser.start()
 
         if not is_browser_open:
@@ -177,18 +178,6 @@ class GestureDetail(tk.Frame):
             # Refresh the visualiser
             # TODO
             return
-
-    def on_browser_window_close(self):
-        global is_browser_open, browser_window, browser_frame
-        if browser_frame:
-            browser_frame.on_root_close()
-            browser_frame = None
-        if browser_window:
-            browser_window.destroy()
-            browser_window = None
-
-        # Reset the flag to indicate that the browser window is closed
-        is_browser_open = False
 
     def open_browser_window(self, url):
         # Create a new top-level window
@@ -210,7 +199,7 @@ class GestureDetail(tk.Frame):
         browser_frame.pack(fill=tk.BOTH, expand=tk.YES)
 
         # add callback for when the window is closed
-        browser_window.protocol("WM_DELETE_WINDOW", lambda: self.on_browser_window_close())
+        browser_window.protocol("WM_DELETE_WINDOW", lambda: on_browser_window_close())
 
         # Load the URL
         browser_frame.embed_browser(url)
@@ -291,9 +280,11 @@ class GestureDetail(tk.Frame):
         if selected_index:
             selected_filename = self.recordings_listbox.get(selected_index[0]) + '.csv'
             # Ask for confirmation
-            if msgbox.askyesno("Delete recording for gesture", f"Are you sure you want to delete recording {selected_filename}?"):
+            if msgbox.askyesno("Delete recording for gesture",
+                               f"Are you sure you want to delete recording {selected_filename}?"):
                 # Delete the csv file
-                session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
+                session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}',
+                                              f'g_{self.gesture}')
                 send2trash.send2trash(os.path.join(session_folder, selected_filename))
                 # os.remove(os.path.join(session_folder, selected_filename))
 
@@ -301,3 +292,21 @@ class GestureDetail(tk.Frame):
                 self.recordings_listbox.delete(selected_index[0])
 
                 self.load_recordings()
+
+
+def on_browser_window_close():
+    global is_browser_open, browser_window, browser_frame
+    if browser_frame:
+        browser_frame.on_root_close()
+        browser_frame = None
+    if browser_window:
+        browser_window.destroy()
+        browser_window = None
+
+    # Reset the flag to indicate that the browser window is closed
+    is_browser_open = False
+
+def get_browser_open():
+    global is_browser_open
+    return is_browser_open
+

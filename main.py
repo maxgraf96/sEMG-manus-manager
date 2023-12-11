@@ -9,7 +9,8 @@ from cefpython3 import cefpython as cef
 
 import ctypes
 
-from components.gesture_detail import p_visualiser, q_visualiser
+from components.gesture_detail import p_visualiser, q_visualiser, on_browser_window_close, \
+    get_browser_open
 from components.session_detail import SessionDetail
 from components.sidebar import Sidebar
 from config import FONT, BG_COLOUR_LIGHT, FG_COLOUR_LIGHT, BG_COLOUR_DARK, FG_COLOUR_DARK
@@ -132,6 +133,10 @@ class App(tk.Tk):
         self.status_label.configure(bg='grey', fg='black')
 
     def on_close(self):
+        if get_browser_open():
+            # Close the browser window
+            on_browser_window_close()
+
         cef.Shutdown()
         q_visualiser.put("terminate")
         if p_visualiser is not None:
