@@ -114,11 +114,20 @@ class GestureDetail(tk.Frame):
         # Load sessions for this gesture
         self.load_recordings()
 
-        self.new_recording_button = tk.Button(self, text="Start New Recording", command=self.start_new_recording,
-                                              bg=self.root.colour_config["bg"], fg=self.root.colour_config["fg"],
-                                              relief=tk.RIDGE, borderwidth=1)
+        self.slow_recording_button = tk.Button(self, text="Record Slow", command=lambda: self.start_new_recording('slow'),
+                                               bg="#95a5a6", fg=self.root.colour_config["fg"],
+                                               relief=tk.RIDGE, borderwidth=1)
         # New session button should be 200px wide and left-aligned
-        self.new_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
+        self.slow_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
+        self.medium_recording_button = tk.Button(self, text="Record Medium", command=lambda: self.start_new_recording('medium'),
+                                                 bg="#bdc3c7", fg=self.root.colour_config["fg"],
+                                                 relief=tk.RIDGE, borderwidth=1)
+        self.medium_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
+
+        self.fast_recording_button = tk.Button(self, text="Record Fast", command=lambda: self.start_new_recording('fast'),
+                                               bg="#ecf0f1", fg=self.root.colour_config["fg"],
+                                               relief=tk.RIDGE, borderwidth=1)
+        self.fast_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
 
     def load_recordings(self):
         # Get the session folder path
@@ -221,7 +230,7 @@ class GestureDetail(tk.Frame):
         # Open the selected recording file
         os.startfile(os.path.join(session_folder, selected_filename))
 
-    def start_new_recording(self):
+    def start_new_recording(self, speed: str = 'medium'):
         q_result = multiprocessing.Queue()
         # Helper q to terminate the recording
         q_terminate = multiprocessing.Queue()
@@ -235,11 +244,11 @@ class GestureDetail(tk.Frame):
         # Record for 5 seconds
         should_stop_recording = False
         recording = []
-        while q_myo_ready.empty():
+        while q_myo_ready.empty() and q_terminate.empty():
             time.sleep(0.01)
 
         timer = time.time()
-        while not should_stop_recording:
+        while not should_stop_recording and q_terminate.empty():
             while not q_result.empty():
                 emg = q_result.get()
                 # Convert the data to a flat list
@@ -258,21 +267,27 @@ class GestureDetail(tk.Frame):
         # Terminate the recording
         q_terminate.put(True)
 
-        # Generate a unique filename for the recording
-        now = datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
-        recording_filename = f"recording_{now}.csv"
-        # Get the session folder path
-        session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
-        # Create the recording file
-        recording_path = os.path.join(session_folder, recording_filename)
-        os.makedirs(session_folder, exist_ok=True)
-        np.savetxt(recording_path, np.array(recording, dtype=float), delimiter=",")
+        # Save recording if it's not empty
+        if recording:
+            # Generate a unique filename for the recording
+            now = datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+            recording_filename = f"recording_{speed}_{now}.csv"
+            # Get the session folder path
+            session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
+            # Create the recording file
+            recording_path = os.path.join(session_folder, recording_filename)
+            os.makedirs(session_folder, exist_ok=True)
+            np.savetxt(recording_path, np.array(recording, dtype=float), delimiter=",")
+            # Display a confirmation message
+            msgbox.showinfo("Recording Finished", f"Recording saved as {recording_filename}")
+        else:
+            # Retrieve error string from q_terminate (2nd element in the queue)
+            error = q_terminate.get()
+            # Recording empty -> display error dialog box
+            msgbox.showerror("Recording Error", error)
 
         # Update the recordings listbox
         self.load_recordings()
-
-        # Display a confirmation message
-        msgbox.showinfo("Recording Finished", f"Recording saved as {recording_filename}")
 
     def delete_recording_listbox(self, event):
         # Get selected item index
@@ -306,7 +321,7 @@ def on_browser_window_close():
     # Reset the flag to indicate that the browser window is closed
     is_browser_open = False
 
+
 def get_browser_open():
     global is_browser_open
     return is_browser_open
-

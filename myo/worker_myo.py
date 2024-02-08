@@ -2,7 +2,14 @@ from pyomyo import Myo, emg_mode
 
 
 def worker_myo(q_out, q_terminate, q_myo_ready):
-    m = Myo(mode=emg_mode.PREPROCESSED)
+    m = None
+    try:
+        m = Myo(mode=emg_mode.PREPROCESSED)
+    except ValueError as e:
+        print(e)
+        # Add to terminate queue to stop the worker
+        q_terminate.put(str(e))
+        return None
     m.connect()
 
     def add_to_queue(emg, movement):

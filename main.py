@@ -25,7 +25,7 @@ class App(tk.Tk):
 
         self.title('sEMG Manus Manager')
         self.iconbitmap('resources/tap.ico')
-        self.geometry("1300x800")
+        self.geometry("1500x800")
         self.configure(bg=BG_COLOUR_LIGHT)  # Set the background color of the main window
         # Add state variable for theme
         self.theme_mode = "light"
@@ -39,6 +39,7 @@ class App(tk.Tk):
         self.create_status_bar()
         self.create_widgets()
 
+        cef.DpiAware.EnableHighDpiSupport()
         cef.Initialize()
 
     def create_widgets(self):
