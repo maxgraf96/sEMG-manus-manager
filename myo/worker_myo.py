@@ -1,10 +1,13 @@
+import datetime
+from datetime import time
+
 from pyomyo import Myo, emg_mode
 
 
 def worker_myo(q_out, q_terminate, q_myo_ready):
     m = None
     try:
-        m = Myo(mode=emg_mode.PREPROCESSED)
+        m = Myo(mode=emg_mode.FILTERED)
     except ValueError as e:
         print(e)
         # Add to terminate queue to stop the worker
@@ -12,8 +15,14 @@ def worker_myo(q_out, q_terminate, q_myo_ready):
         return None
     m.connect()
 
-    def add_to_queue(emg, movement):
-        q_out.put(emg)
+    def add_to_queue(emg, moving):
+        # Get timestamp since epoch in milliseconds
+        timestamp = datetime.datetime.now().timestamp() * 1000
+
+        data = list(emg)
+        data.append(timestamp)
+
+        q_out.put(data)
 
     m.add_emg_handler(add_to_queue)
 

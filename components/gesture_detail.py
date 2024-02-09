@@ -29,6 +29,11 @@ is_browser_open = False
 browser_window = None
 browser_frame = None
 
+# Myo setup
+q_myo = multiprocessing.Queue()
+
+# MANUS setup
+q_manus = multiprocessing.Queue()
 
 def visualiser_process(q):
     # Run the visualiser: the command is 'npx vite' and the working directory is the visualiser path
@@ -238,8 +243,12 @@ class GestureDetail(tk.Frame):
         # Only when the myo is ready, the recording will start
         q_myo_ready = multiprocessing.Queue()
 
+        # Clear all queues
+        q_myo.empty()
+        q_manus.empty()
+
         # Start a new recording
-        start_recording(q_result, q_terminate, q_myo_ready)
+        start_recording(q_myo, q_manus, q_result, q_terminate, q_myo_ready)
 
         # Record for 5 seconds
         should_stop_recording = False
@@ -249,23 +258,38 @@ class GestureDetail(tk.Frame):
 
         timer = time.time()
         while not should_stop_recording and q_terminate.empty():
-            while not q_result.empty():
-                emg = q_result.get()
-                # Convert the data to a flat list
-                emg_flat = [float(item) for item in emg]
-                # recording.append(emg_flat.copy())
-                print(emg_flat)
-                recording.append(emg_flat.copy())
-
-                if time.time() - timer > 5:
-                    should_stop_recording = True
-
-                now = time.time()
-            else:
-                time.sleep(0.001)
+            time.sleep(0.001)
+            if time.time() - timer > 5:
+                should_stop_recording = True
 
         # Terminate the recording
         q_terminate.put(True)
+
+        # Get data from our queues
+        emg_data = []
+        manus_data = []
+
+        while not q_myo.empty():
+            current = q_myo.get()
+            emg_data.append(current)
+
+        while not q_manus.empty():
+            current = q_manus.get()
+            manus_data.append(current)
+
+        # Now, for each data point in q_myo find the corresponding data point in q_manus - the one with
+        # the closest timestamp
+        recording = []
+        time_diffs = []
+        for emg in emg_data:
+            timestamp = emg[-1]
+            # Find the closest timestamp in the manus data
+            closest = min(manus_data, key=lambda x: abs(x[-1] - timestamp))
+            recording.append(emg[:-1] + closest[:-1])
+            time_diffs.append(abs(closest[-1] - timestamp))
+
+        print(f"Matched {len(recording)} EMG data points with {len(manus_data)} hand pose samples.")
+        print(f"Average time difference: {np.mean(time_diffs)} ms")
 
         # Save recording if it's not empty
         if recording:

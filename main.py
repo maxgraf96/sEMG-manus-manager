@@ -1,8 +1,14 @@
+import errno
 import os
+import signal
+import subprocess
 import time
 
 import tkinter as tk
 from tkinter import ttk
+
+import zmq
+
 from components.VerticallyScrolledFrame import VerticalScrolledFrame
 from PIL import ImageTk, Image
 from cefpython3 import cefpython as cef
@@ -142,10 +148,22 @@ class App(tk.Tk):
         q_visualiser.put("terminate")
         if p_visualiser is not None:
             p_visualiser.wait()
+
         self.destroy()
 
 
+
+
 if __name__ == '__main__':
+    # Start the MANUS SDKClient
+    manus_process = subprocess.Popen(
+        ["start", "C:\\Users\\Max\\Desktop\\MANUS_SDKClient\\Output\\Release\\x64\\SDKClient.exe"],
+        shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
+
     app = App()
     app.protocol("WM_DELETE_WINDOW", app.on_close)
     app.mainloop()
+
+    # Kill process by name
+    os.system("taskkill /f /im SDKClient.exe")
