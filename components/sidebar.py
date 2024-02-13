@@ -7,10 +7,10 @@ from config import FONT
 
 
 class Sidebar(tk.Frame):
-    def __init__(self, parent, callback):
-        super().__init__(parent, bg=parent.colour_config["bg"])
+    def __init__(self, root, parent, callback):
+        super().__init__(parent, bg=root.colour_config["bg"])
         self.callback = callback
-        self.parent = parent
+        self.root = root
         self.create_widgets()
 
         self.pack_configure(padx=(10, 0), pady=10, fill=tk.Y)
@@ -19,16 +19,16 @@ class Sidebar(tk.Frame):
         self.config(width=250)
 
     def create_widgets(self):
-        self.label = tk.Label(self, text="Users", font=(FONT, 14), bg=self.parent.colour_config["bg"], fg=self.parent.colour_config["fg"])
+        self.label = tk.Label(self, text="Users", font=(FONT, 14), bg=self.root.colour_config["bg"], fg=self.root.colour_config["fg"])
         self.label.pack()
 
-        self.add_user_button = tk.Button(self, text="Add New User", command=self.add_new_user, bg=self.parent.colour_config["bg"],
-                                         fg=self.parent.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
+        self.add_user_button = tk.Button(self, text="Add New User", command=self.add_new_user, bg=self.root.colour_config["bg"],
+                                         fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
         self.add_user_button.pack(side=tk.BOTTOM, pady=(10, 0))
         # Add top and bottom padding to the button
         self.add_user_button.pack_configure(fill=tk.X)
 
-        self.listbox = tk.Listbox(self, fg=self.parent.colour_config["fg"], bg=self.parent.colour_config["bg"], selectbackground='grey', selectforeground='white',
+        self.listbox = tk.Listbox(self, fg=self.root.colour_config["fg"], bg=self.root.colour_config["bg"], selectbackground='grey', selectforeground='white',
                                   highlightthickness=0, highlightbackground='grey', relief=tk.RIDGE, borderwidth=1)
         self.listbox.pack(fill=tk.BOTH, expand=True)
 

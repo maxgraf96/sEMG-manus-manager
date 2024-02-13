@@ -1,3 +1,4 @@
+import datetime
 import multiprocessing
 import os
 import signal
@@ -5,18 +6,44 @@ import subprocess
 import time
 import tkinter as tk
 import tkinter.messagebox as msgbox
-import webbrowser
-from tkinter import LEFT, RIGHT
-import datetime
+from tkinter import LEFT, ttk
 
 import numpy as np
 import send2trash
 
 from components.browser import BrowserFrame
-from myo.data_collection import start_recording
 from config import FONT, VISUALISER_PATH
+from helpers import RepeatedTimer
+from myo.data_collection import start_recording
 
-GESTURES = ['fist', 'wave_in', 'wave_out', 'fingers_spread', 'double_tap']
+GESTURES = [
+    # GENERAL
+    'flexext_fist',
+    'flexext_thumb',
+    'flexext_index',
+    'flexext_middle',
+    'flexext_ring',
+    'flexext_pinky',
+    'finger_tap_surface',
+    'thumbs_up',
+    'point_index',
+    'ab_add_all',
+    'ab_add_thumb_index',
+    'ab_add_index_middle',
+    'ab_add_middle_ring',
+    'ab_add_ring_pinky',
+    # XRMI
+    'tap_thumb',
+    'tap_index',
+    'tap_middle',
+    'tap_ring',
+    'tap_pinky',
+    'pinched_tap_thumb_index',
+    'pinched_tap_index_middle',
+    'pinched_tap_middle_ring',
+    'pinched_tap_ring_pinky',
+    'melody'
+]
 
 # Visualiser setup -> that's the Three.js app
 # Queue for interacting with the visualiser
@@ -34,6 +61,7 @@ q_myo = multiprocessing.Queue()
 
 # MANUS setup
 q_manus = multiprocessing.Queue()
+
 
 def visualiser_process(q):
     # Run the visualiser: the command is 'npx vite' and the working directory is the visualiser path
@@ -70,6 +98,7 @@ class GestureDetail(tk.Frame):
         self.context_menu = tk.Menu(root, tearoff=0)
         self.context_menu.add_command(label="Show in Explorer", command=self.show_in_explorer)
         self.context_menu.add_command(label="Show Visualisation", command=self.show_visualisation)
+        self.context_menu.add_command(label="Run Inference on File", command=self.run_inference_on_file)
 
     def on_right_click(self, event):
         # Get the index of the item under the cursor
@@ -85,19 +114,8 @@ class GestureDetail(tk.Frame):
         self.context_menu.post(event.x_root, event.y_root)
 
     def show_in_explorer(self):
-        # Get the selected recording index
-        selected_index = self.recordings_listbox.curselection()
-        # Check if a recording is selected
-        if not selected_index:
-            return
-        # Get the session folder path
-        session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
-        # Get the selected filename
-        selected_filename = self.recordings_listbox.get(selected_index[0]) + '.csv'
-        # Create full path
-        selected_filename = os.path.join(session_folder, selected_filename)
-        # Normalize the file path
-        normalized_path = os.path.normpath(selected_filename)
+        # Get the normalised path
+        normalized_path = self.get_normalised_path()
         # Open the file location in Windows Explorer
         subprocess.run(['explorer', '/select,', normalized_path])
 
@@ -119,20 +137,27 @@ class GestureDetail(tk.Frame):
         # Load sessions for this gesture
         self.load_recordings()
 
-        self.slow_recording_button = tk.Button(self, text="Record Slow", command=lambda: self.start_new_recording('slow'),
+        self.slow_recording_button = tk.Button(self, text="Record Slow",
+                                               command=lambda: self.start_new_recording('slow'),
                                                bg="#95a5a6", fg=self.root.colour_config["fg"],
                                                relief=tk.RIDGE, borderwidth=1)
         # New session button should be 200px wide and left-aligned
         self.slow_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
-        self.medium_recording_button = tk.Button(self, text="Record Medium", command=lambda: self.start_new_recording('medium'),
+        self.medium_recording_button = tk.Button(self, text="Record Medium",
+                                                 command=lambda: self.start_new_recording('medium'),
                                                  bg="#bdc3c7", fg=self.root.colour_config["fg"],
                                                  relief=tk.RIDGE, borderwidth=1)
         self.medium_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
 
-        self.fast_recording_button = tk.Button(self, text="Record Fast", command=lambda: self.start_new_recording('fast'),
+        self.fast_recording_button = tk.Button(self, text="Record Fast",
+                                               command=lambda: self.start_new_recording('fast'),
                                                bg="#ecf0f1", fg=self.root.colour_config["fg"],
                                                relief=tk.RIDGE, borderwidth=1)
         self.fast_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
+
+        self.progressbar = ttk.Progressbar(self, orient=tk.HORIZONTAL, length=200, mode='determinate')
+        # Hide the progress bar
+        self.progressbar.pack_forget()
 
     def load_recordings(self):
         # Get the session folder path
@@ -160,8 +185,8 @@ class GestureDetail(tk.Frame):
 
         # Bind double-click event to open the selected recording
         self.recordings_listbox.bind(
-            "<Double-Button-1>", lambda event: self.show_visualisation()
-            # "<Double-Button-1>", lambda event: self.open_selected_recording()
+            # "<Double-Button-1>", lambda event: self.show_visualisation()
+            "<Double-Button-1>", lambda event: self.open_selected_recording()
         )
 
     def show_visualisation(self):
@@ -251,67 +276,113 @@ class GestureDetail(tk.Frame):
         start_recording(q_myo, q_manus, q_result, q_terminate, q_myo_ready)
 
         # Record for 5 seconds
-        should_stop_recording = False
-        recording = []
         while q_myo_ready.empty() and q_terminate.empty():
             time.sleep(0.01)
 
-        timer = time.time()
-        while not should_stop_recording and q_terminate.empty():
-            time.sleep(0.001)
-            if time.time() - timer > 5:
-                should_stop_recording = True
+        # Colour background of the status bar to indicate that the recording is in progress
+        self.root.status_bar.config(bg='#EA2027')
 
-        # Terminate the recording
-        q_terminate.put(True)
+        # Show progress bar
+        self.progressbar['value'] = 0
+        self.progressbar.pack_configure(pady=(5, 0))
 
-        # Get data from our queues
-        emg_data = []
-        manus_data = []
+        # Start the recording
+        # RECORDING_LENGTH = 5
+        RECORDING_LENGTH = 10
+        WARMUP_LENGTH = 1
+        MYO_SR = 50
 
-        while not q_myo.empty():
-            current = q_myo.get()
-            emg_data.append(current)
+        def check_terminate():
+            # Update progress bar
+            self.progressbar['value'] = q_myo.qsize() / (MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH)) * 100
 
-        while not q_manus.empty():
-            current = q_manus.get()
-            manus_data.append(current)
+            if q_myo.qsize() < MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH):
+                return
 
-        # Now, for each data point in q_myo find the corresponding data point in q_manus - the one with
-        # the closest timestamp
-        recording = []
-        time_diffs = []
-        for emg in emg_data:
-            timestamp = emg[-1]
-            # Find the closest timestamp in the manus data
-            closest = min(manus_data, key=lambda x: abs(x[-1] - timestamp))
-            recording.append(emg[:-1] + closest[:-1])
-            time_diffs.append(abs(closest[-1] - timestamp))
+            # Stop timer
+            repeating_timer.stop()
 
-        print(f"Matched {len(recording)} EMG data points with {len(manus_data)} hand pose samples.")
-        print(f"Average time difference: {np.mean(time_diffs)} ms")
+            # Terminate the recording
+            q_terminate.put(True)
 
-        # Save recording if it's not empty
-        if recording:
-            # Generate a unique filename for the recording
-            now = datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
-            recording_filename = f"recording_{speed}_{now}.csv"
-            # Get the session folder path
-            session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
-            # Create the recording file
-            recording_path = os.path.join(session_folder, recording_filename)
-            os.makedirs(session_folder, exist_ok=True)
-            np.savetxt(recording_path, np.array(recording, dtype=float), delimiter=",")
-            # Display a confirmation message
-            msgbox.showinfo("Recording Finished", f"Recording saved as {recording_filename}")
-        else:
-            # Retrieve error string from q_terminate (2nd element in the queue)
-            error = q_terminate.get()
-            # Recording empty -> display error dialog box
-            msgbox.showerror("Recording Error", error)
+            # Get data from our queues
+            emg_data = []
+            manus_data = []
 
-        # Update the recordings listbox
-        self.load_recordings()
+            while not q_myo.empty():
+                current = q_myo.get()
+                emg_data.append(current)
+
+            while not q_manus.empty():
+                current = q_manus.get()
+                manus_data.append(current)
+
+            # Now, for each data point in q_myo find the corresponding data point in q_manus - the one with
+            # the closest timestamp
+            recording = []
+            time_diffs = []
+            for emg in emg_data:
+                timestamp = emg[-1]
+                # Find the closest timestamp in the manus data
+                closest = min(manus_data, key=lambda x: abs(x[-1] - timestamp))
+                recording.append(emg[:-1] + closest[:-1])
+                time_diffs.append(abs(closest[-1] - timestamp))
+
+            # Ditch the first 1s of data points (warmup)
+            recording = recording[MYO_SR:]
+
+            print(f"Matched {len(recording)} EMG data points with {len(manus_data)} hand pose samples.")
+            avg_time_diff = float("{:.2f}".format(np.mean(time_diffs)))
+            print(f"Average time difference: {avg_time_diff} ms")
+
+            # Colour background of the status bar to indicate that the recording is finished
+            self.root.status_bar.config(bg=self.root.status_bar_bg)
+
+            # Save recording if it's not empty
+            if recording:
+                # Generate a unique filename for the recording
+                now = datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
+                recording_filename = f"recording_{speed}_{now}.csv"
+                # Get the session folder path
+                session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}',
+                                              f'g_{self.gesture}')
+                # Create the recording file
+                recording_path = os.path.join(session_folder, recording_filename)
+                os.makedirs(session_folder, exist_ok=True)
+                np.savetxt(recording_path, np.array(recording, dtype=float), delimiter=",")
+                # Display a confirmation message
+                msgbox.showinfo("Recording Finished", f"Recording saved as {recording_filename}")
+            else:
+                # Retrieve error string from q_terminate (2nd element in the queue)
+                error = q_terminate.get()
+                # Recording empty -> display error dialog box
+                msgbox.showerror("Recording Error", error)
+
+            # Hide progress bar
+            self.progressbar.pack_forget()
+            # Update the recordings listbox
+            self.load_recordings()
+            # Update total number of datapoints
+            self.root.update_total_datapoints()
+
+        # Start a repeating timer to check if the recording is finished
+        repeating_timer = RepeatedTimer(0.1, check_terminate)
+
+    def get_normalised_path(self):
+        # Get the selected recording index
+        selected_index = self.recordings_listbox.curselection()
+        # Check if a recording is selected
+        if not selected_index:
+            return None
+        # Get the session folder path
+        session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
+        # Get the selected filename
+        selected_filename = self.recordings_listbox.get(selected_index[0]) + '.csv'
+        # Create full path
+        selected_filename = os.path.join(session_folder, selected_filename)
+        # Normalize the file path
+        normalized_path = os.path.normpath(selected_filename)
+        return normalized_path
 
     def delete_recording_listbox(self, event):
         # Get selected item index
@@ -331,6 +402,13 @@ class GestureDetail(tk.Frame):
                 self.recordings_listbox.delete(selected_index[0])
 
                 self.load_recordings()
+
+    def run_inference_on_file(self):
+        # Get the normalised path
+        normalized_path = self.get_normalised_path()
+
+        # Switch to inference tab and pass the file path
+        self.root.switch_to_inference_from_file(normalized_path)
 
 
 def on_browser_window_close():

@@ -1,26 +1,21 @@
-import errno
 import os
-import signal
+import ctypes
+import os
 import subprocess
-import time
-
 import tkinter as tk
 from tkinter import ttk
 
-import zmq
-
-from components.VerticallyScrolledFrame import VerticalScrolledFrame
-from PIL import ImageTk, Image
+from PIL import ImageTk
 from cefpython3 import cefpython as cef
 
-import ctypes
-
+from components.VerticallyScrolledFrame import VerticalScrolledFrame
 from components.gesture_detail import p_visualiser, q_visualiser, on_browser_window_close, \
     get_browser_open
+from components.inference import InferenceFrame
 from components.session_detail import SessionDetail
 from components.sidebar import Sidebar
 from config import FONT, BG_COLOUR_LIGHT, FG_COLOUR_LIGHT, BG_COLOUR_DARK, FG_COLOUR_DARK
-from helpers import configure_recursively
+from helpers import configure_recursively, get_total_number_of_datapoints
 
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
@@ -49,27 +44,57 @@ class App(tk.Tk):
         cef.Initialize()
 
     def create_widgets(self):
-        self.sidebar = Sidebar(self, self.load_user_data)
+        # Configure style for the notebook tab
+        style = ttk.Style()
+        style.configure('TNotebook.Tab', padding=[200, 2])
+        # Make frame background white
+        style.configure('TFrame', background=self.colour_config["bg"])
+
+        # Create the notebook (tab container)
+        self.notebook = ttk.Notebook(self)
+        # Create two frames for the two tabs
+        tab1_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
+        tab2_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
+
+        # Add frames to notebook as individual tabs
+        self.notebook.add(tab1_frame, text='Data Collection')
+        self.notebook.add(tab2_frame, text='Inference')
+
+        # DATA COLLECTION TAB
+        self.sidebar = Sidebar(self, tab1_frame, self.load_user_data)
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y)
 
-        self.detail_frame = VerticalScrolledFrame(self)
+        self.detail_frame = VerticalScrolledFrame(tab1_frame)
         self.detail_frame.pack(fill=tk.BOTH, expand=True)
 
+        # INFERENCE TAB
+        self.inference_frame = InferenceFrame(tab2_frame, self)
+        self.inference_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+
+    def update_total_datapoints(self):
+        self.datapoints.set(f"Total number of datapoints: {get_total_number_of_datapoints()}")
+
     def create_status_bar(self):
-        self.status_bar = tk.Frame(self, height=36, bg='grey')  # Create a frame for the status bar
+        self.status_bar_bg = "#009432"
+        self.status_bar = tk.Frame(self, height=36, bg=self.status_bar_bg)  # Create a frame for the status bar
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)  # Attach the status bar to the bottom
         self.status_bar.pack_propagate(False)  # Prevent the status bar from resizing
 
-        # MANUS status label
-        self.status_label = tk.Label(self.status_bar, text="Waiting for Manus connection...", bg='grey', anchor='e')
-        self.status_label.pack(side=tk.RIGHT, padx=10)
+        # Show cumulative number of datapoints
+        # TKInter variable to update the label
+        self.datapoints = tk.StringVar()
+        self.datapoints_label = tk.Label(self.status_bar, bg=self.status_bar_bg, textvariable=self.datapoints, fg='white', anchor='e')
+        self.update_total_datapoints()
+        self.datapoints_label.pack(side=tk.RIGHT, padx=10)
 
         # Light/dark theme toggle button
         # Load the ico file
         photo_image = ImageTk.PhotoImage(file="resources/day-and-night.ico")
         # Create the button and set the image
         self.theme_toggle_button = tk.Button(self.status_bar, image=photo_image, name="theme_toggle_button",
-                                             command=self.toggle_theme, bg='grey', borderwidth=0, width=24, height=24)
+                                             command=self.toggle_theme, bg=self.status_bar_bg, borderwidth=0, width=24, height=24)
         self.theme_toggle_button.image = photo_image
         self.theme_toggle_button.pack(side=tk.LEFT, padx=10)
 
@@ -115,6 +140,12 @@ class App(tk.Tk):
                                        command=lambda: self.create_new_session(user_folder))
         new_session_button.pack(pady=20)
 
+    def switch_to_inference_from_file(self, file_path):
+        # Select inference frame
+        self.notebook.select(1)
+
+        # self.inference_frame.switch_to_inference_from_file(file_path)
+
     def toggle_theme(self):
         if self.theme_mode == "light":
             self.theme_mode = "dark"
@@ -136,8 +167,8 @@ class App(tk.Tk):
         configure_recursively(self, self.colour_config)
 
         self.detail_frame.canvas.configure(bg=bg)
-        self.status_bar.configure(bg='grey')
-        self.status_label.configure(bg='grey', fg='black')
+        self.status_bar.configure(bg=self.status_bar_bg)
+        self.datapoints_label.configure(bg='grey', fg='black')
 
     def on_close(self):
         if get_browser_open():
@@ -157,7 +188,7 @@ class App(tk.Tk):
 if __name__ == '__main__':
     # Start the MANUS SDKClient
     manus_process = subprocess.Popen(
-        ["start", "C:\\Users\\Max\\Desktop\\MANUS_SDKClient\\Output\\Release\\x64\\SDKClient.exe"],
+        ["start", "/min", "C:\\Users\\Max\\Desktop\\MANUS_SDKClient\\Output\\Release\\x64\\SDKClient.exe"],
         shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
 

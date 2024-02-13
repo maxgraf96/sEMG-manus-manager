@@ -163,3 +163,4 @@ user_data/*
 
 components/blob_storage
 components/webrtc_event_logs
+blob_storage/
