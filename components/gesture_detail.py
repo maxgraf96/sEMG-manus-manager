@@ -11,6 +11,7 @@ from tkinter import LEFT, ttk
 import numpy as np
 import send2trash
 
+import helpers
 from components.browser import BrowserFrame
 from config import FONT, VISUALISER_PATH
 from helpers import RepeatedTimer
@@ -81,6 +82,60 @@ def visualiser_process(q):
     proc.kill()
 
     return
+
+
+def open_browser_window(url):
+    # Create a new top-level window
+    global browser_window, browser_frame
+    browser_window = tk.Toplevel()
+    browser_window.title("Hand Visualiser")
+    browser_window.minsize(800, 600)
+
+    # Create a WebFrame in the new window
+    browser_window.grid_columnconfigure(0, weight=1)
+    browser_window.grid_rowconfigure(0, weight=1)
+
+    # Create Frame
+    frame = tk.Frame(browser_window, bg='black')
+    frame.grid(row=0, column=0, sticky=('NSWE'))
+
+    # Create Browser Frame
+    browser_frame = BrowserFrame(frame)
+    browser_frame.pack(fill=tk.BOTH, expand=tk.YES)
+
+    # add callback for when the window is closed
+    browser_window.protocol("WM_DELETE_WINDOW", lambda: on_browser_window_close())
+
+    # Load the URL
+    browser_frame.embed_browser(url)
+
+
+def show_visualisation():
+    """
+    Show the visualisation for the selected recording
+    :return:
+    """
+
+    global p_visualiser, q_visualiser, is_browser_open, browser_window
+    # Check if the visualiser process is already running
+    if p_visualiser is None:
+        print("No visualiser process running, starting a new one.")
+        p_visualiser = multiprocessing.Process(target=visualiser_process,
+                                               args=(q_visualiser,))
+        p_visualiser.start()
+
+    if not is_browser_open:
+        # Open the visualiser in a new browser window
+        open_browser_window("http://localhost:5173")
+        # Set the flag to indicate that the browser window is open
+        is_browser_open = True
+    else:
+        # Refresh the visualiser
+        # Just reload the page
+        browser_frame.reload_page()
+        # push browser to front
+        browser_window.lift()
+        return
 
 
 class GestureDetail(tk.Frame):
@@ -190,58 +245,18 @@ class GestureDetail(tk.Frame):
         )
 
     def show_visualisation(self):
-        """
-        Show the visualisation for the selected recording
-        :return:
-        """
+        filename = self.recordings_listbox.get(self.recordings_listbox.curselection()[0]) + '.csv'
+        # Get full absolute path
+        filename = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}', filename)
 
-        global p_visualiser, q_visualiser, is_browser_open
-        # Check if the visualiser process is already running
-        if p_visualiser is not None:
-            # Pipe the filename to the visualiser
-            filename = self.recordings_listbox.get(self.recordings_listbox.curselection()[0]) + '.csv'
-            print(f"Visualiser already running, piping new file {filename}.")
-            # TODO update this with the actual hand data
-        else:
-            print("No visualiser process running, starting a new one.")
-            p_visualiser = multiprocessing.Process(target=visualiser_process,
-                                                   args=(q_visualiser,))
-            p_visualiser.start()
+        # Extract hand pose data from the selected recording - this must be in the same format as the inference results.
+        data = helpers.extract_hand_pose_data_from_gt_csv(filename)
+        # Create visualiser temp csv
+        temp_csv_path = helpers.create_visualiser_csv(data)
 
-        if not is_browser_open:
-            # Open the visualiser in a new browser window
-            self.open_browser_window("http://localhost:5173")
-            # Set the flag to indicate that the browser window is open
-            is_browser_open = True
-        else:
-            # Refresh the visualiser
-            # TODO
-            return
-
-    def open_browser_window(self, url):
-        # Create a new top-level window
-        global browser_window, browser_frame
-        browser_window = tk.Toplevel()
-        browser_window.title("Hand Visualiser")
-        browser_window.minsize(800, 600)
-
-        # Create a WebFrame in the new window
-        browser_window.grid_columnconfigure(0, weight=1)
-        browser_window.grid_rowconfigure(0, weight=1)
-
-        # Create Frame
-        frame = tk.Frame(browser_window, bg='black')
-        frame.grid(row=0, column=0, sticky=('NSWE'))
-
-        # Create Browser Frame
-        browser_frame = BrowserFrame(frame)
-        browser_frame.pack(fill=tk.BOTH, expand=tk.YES)
-
-        # add callback for when the window is closed
-        browser_window.protocol("WM_DELETE_WINDOW", lambda: on_browser_window_close())
-
-        # Load the URL
-        browser_frame.embed_browser(url)
+        # Copy file to the visualiser folder
+        helpers.update_visualiser_temp_file(temp_csv_path)
+        show_visualisation()
 
     def open_selected_recording(self):
         """

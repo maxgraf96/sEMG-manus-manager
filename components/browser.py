@@ -33,6 +33,9 @@ class BrowserFrame(tk.Frame):
         self.browser.SetClientHandler(FocusHandler(self))
         self.message_loop_work()
 
+    def reload_page(self):
+        self.browser.Reload()
+
     def get_window_handle(self):
         if self.winfo_id() > 0:
             return self.winfo_id()

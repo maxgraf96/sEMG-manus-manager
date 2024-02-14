@@ -11,7 +11,7 @@ from cefpython3 import cefpython as cef
 from components.VerticallyScrolledFrame import VerticalScrolledFrame
 from components.gesture_detail import p_visualiser, q_visualiser, on_browser_window_close, \
     get_browser_open
-from components.inference import InferenceFrame
+from inference import InferenceFrame
 from components.session_detail import SessionDetail
 from components.sidebar import Sidebar
 from config import FONT, BG_COLOUR_LIGHT, FG_COLOUR_LIGHT, BG_COLOUR_DARK, FG_COLOUR_DARK
@@ -142,9 +142,9 @@ class App(tk.Tk):
 
     def switch_to_inference_from_file(self, file_path):
         # Select inference frame
-        self.notebook.select(1)
+        # self.notebook.select(1)
 
-        # self.inference_frame.switch_to_inference_from_file(file_path)
+        self.inference_frame.switch_to_inference_from_file(file_path)
 
     def toggle_theme(self):
         if self.theme_mode == "light":
