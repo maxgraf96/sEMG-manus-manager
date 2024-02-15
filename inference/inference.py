@@ -11,7 +11,9 @@ import zmq
 import helpers
 from components import gesture_detail
 from config import FONT
+from inference.worker_inference import worker_myo_receiver, worker_inference_res_to_visualiser
 from myo.worker_myo import worker_myo
+from components.gesture_detail import show_visualisation
 
 
 class InferenceFromFile(tk.Frame):
@@ -99,11 +101,19 @@ class InferenceFromFile(tk.Frame):
 class InferenceFromLive(tk.Frame):
     def __init__(self, parent, root, inference_frame):
         super().__init__(parent, bg=root.colour_config["bg"])
+        self.p_inference_visualiser_bridge = None
+        self.p_myo = None
+        self.p_myo_receiver = None
+        self.q_myo = None
+        self.q_terminate = None
+        self.q_myo_ready = None
         self.root = root
         self.inference_frame = inference_frame
 
         self.create_widgets()
         self.pack_configure(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+        self.should_terminate_live_inference = False
 
     def create_widgets(self):
         top_frame = tk.Frame(self, bg=self.root.colour_config["bg"])
@@ -115,34 +125,47 @@ class InferenceFromLive(tk.Frame):
                                           bg=self.root.colour_config["bg"],
                                           fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
         self.inference_button.pack_configure(pady=10, ipady=5, fill=tk.X)
+        self.stop_inference_button = tk.Button(self, text="Stop Live Inference", command=self.stop_inference,
+                                                  bg=self.root.colour_config["bg"],
+                                                  fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
+        self.stop_inference_button.pack_configure(pady=10, ipady=5, fill=tk.X)
+
+    def check_terminate_live_inference(self):
+        if self.should_terminate_live_inference:
+            print("Terminating live inference")
+            self.should_terminate_live_inference = False
+            self.q_terminate.put(True)
+
+            self.p_myo.join(1000)
+            self.p_myo_receiver.join(1000)
+            self.p_inference_visualiser_bridge.join(1000)
 
     def infer(self):
         print("Infer from live data")
 
-        q_myo = multiprocessing.Queue()
-        q_terminate = multiprocessing.Queue()
-        q_myo_ready = multiprocessing.Queue()
+        self.q_myo = multiprocessing.Queue()
+        self.q_terminate = multiprocessing.Queue()
+        self.q_myo_ready = multiprocessing.Queue()
 
-        p_myo = multiprocessing.Process(target=worker_myo, args=(q_myo, q_terminate, q_myo_ready,))
-        p_myo.start()
+        # Many myo data collection process - same as in data_collection.py
+        self.p_myo = multiprocessing.Process(target=worker_myo, args=(self.q_myo, self.q_terminate, self.q_myo_ready, ))
+        # Custom myo receiver process
+        self.p_myo_receiver = multiprocessing.Process(target=worker_myo_receiver, args=(self.q_myo, self.q_terminate, ))
+        self.p_inference_visualiser_bridge = multiprocessing.Process(target=worker_inference_res_to_visualiser, args=(self.q_terminate, ))
 
-        # Wait for myo to be ready
-        while q_myo_ready.empty():
-            time.sleep(0.01)
+        self.p_myo.start()
+        self.p_myo_receiver.start()
+        self.p_inference_visualiser_bridge.start()
 
-        # Ready and getting data
-        while True:
-            if not q_myo.empty():
-                emg_data = q_myo.get()[:8]
-                send_data = {"from_file": False, "data": emg_data}
-                js = json.dumps(send_data).encode('utf-8')
-                self.inference_frame.pub_socket.send(js)
-                continue
-            else:
-                time.sleep(0.01)
+        repeating_timer = helpers.RepeatedTimer(0.1, self.check_terminate_live_inference)
+
+        # Visualiser to front
+        show_visualisation()
+
+    def stop_inference(self):
+        self.should_terminate_live_inference = True
 
 
-        p_myo.join(100)
 
 
 class InferenceFrame(tk.Frame):

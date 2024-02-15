@@ -64,20 +64,22 @@ q_myo = multiprocessing.Queue()
 q_manus = multiprocessing.Queue()
 
 
-def visualiser_process(q):
-    # Run the visualiser: the command is 'npx vite' and the working directory is the visualiser path
-    proc = subprocess.Popen(['npx.cmd', 'vite'],
+def visualiser_process(q_visualiser):
+    # Run the visualiser: the command is 'npm run dev' and the working directory is the visualiser path
+    proc = subprocess.Popen(['npm', 'run', 'dev'],
                             cwd=VISUALISER_PATH,
-                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+                            shell=True,
                             )
 
     # Wait for the visualiser to be ready
-    while q.empty():
-        time.sleep(0.5)
+    while q_visualiser.empty():
+        time.sleep(0.3)
 
     # Send ctrl+c and y to the visualiser process
     proc.send_signal(signal.CTRL_BREAK_EVENT)
     time.sleep(0.1)
+    proc.send_signal(signal.CTRL_BREAK_EVENT)
 
     proc.kill()
 

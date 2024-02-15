@@ -14,7 +14,7 @@ def worker_myo(q_out, q_terminate, q_myo_ready):
         # Add to terminate queue to stop the worker
         q_terminate.put(str(e))
         return None
-    m.connect()
+    m.connect(kill_connection=q_terminate)
 
     def add_to_queue(emg, moving):
         # Get timestamp since epoch in milliseconds

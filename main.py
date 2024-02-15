@@ -11,7 +11,7 @@ from cefpython3 import cefpython as cef
 from components.VerticallyScrolledFrame import VerticalScrolledFrame
 from components.gesture_detail import p_visualiser, q_visualiser, on_browser_window_close, \
     get_browser_open
-from inference import InferenceFrame
+from inference.inference import InferenceFrame
 from components.session_detail import SessionDetail
 from components.sidebar import Sidebar
 from config import FONT, BG_COLOUR_LIGHT, FG_COLOUR_LIGHT, BG_COLOUR_DARK, FG_COLOUR_DARK
