@@ -16,6 +16,7 @@ from components.browser import BrowserFrame
 from config import FONT, VISUALISER_PATH
 from helpers import RepeatedTimer
 from myo.data_collection import start_recording
+from components.emg_inspector import EMGInspector, EMGInspectorWindow
 
 GESTURES = [
     # GENERAL
@@ -57,8 +58,12 @@ is_browser_open = False
 browser_window = None
 browser_frame = None
 
+# Inspector setup
+emg_inspector_window = None
+
 # Myo setup
 q_myo = multiprocessing.Queue()
+q_myo_imu = multiprocessing.Queue()
 
 # MANUS setup
 q_manus = multiprocessing.Queue()
@@ -154,8 +159,9 @@ class GestureDetail(tk.Frame):
         # Create a context menu
         self.context_menu = tk.Menu(root, tearoff=0)
         self.context_menu.add_command(label="Show in Explorer", command=self.show_in_explorer)
-        self.context_menu.add_command(label="Show Visualisation", command=self.show_visualisation)
+        self.context_menu.add_command(label="Show 3D Visualisation", command=self.show_visualisation)
         self.context_menu.add_command(label="Run Inference on File", command=self.run_inference_on_file)
+        self.context_menu.add_command(label="Open Inspector", command=self.open_inspector)
 
     def on_right_click(self, event):
         # Get the index of the item under the cursor
@@ -278,7 +284,6 @@ class GestureDetail(tk.Frame):
         os.startfile(os.path.join(session_folder, selected_filename))
 
     def start_new_recording(self, speed: str = 'medium'):
-        q_result = multiprocessing.Queue()
         # Helper q to terminate the recording
         q_terminate = multiprocessing.Queue()
         # Helper q to check if the myo is ready
@@ -287,10 +292,11 @@ class GestureDetail(tk.Frame):
 
         # Clear all queues
         q_myo.empty()
+        q_myo_imu.empty()
         q_manus.empty()
 
         # Start a new recording
-        start_recording(q_myo, q_manus, q_result, q_terminate, q_myo_ready)
+        start_recording(q_myo, q_myo_imu, q_manus, q_terminate, q_myo_ready)
 
         # Record for 5 seconds
         while q_myo_ready.empty() and q_terminate.empty():
@@ -307,7 +313,8 @@ class GestureDetail(tk.Frame):
         # RECORDING_LENGTH = 5
         RECORDING_LENGTH = 10
         WARMUP_LENGTH = 1
-        MYO_SR = 50
+        # MYO_SR = 50
+        MYO_SR = 200
 
         def check_terminate():
             # Update progress bar
@@ -324,11 +331,16 @@ class GestureDetail(tk.Frame):
 
             # Get data from our queues
             emg_data = []
+            imu_data = []
             manus_data = []
 
             while not q_myo.empty():
                 current = q_myo.get()
                 emg_data.append(current)
+
+            while not q_myo_imu.empty():
+                current = q_myo_imu.get()
+                imu_data.append(current)
 
             while not q_manus.empty():
                 current = q_manus.get()
@@ -337,20 +349,29 @@ class GestureDetail(tk.Frame):
             # Now, for each data point in q_myo find the corresponding data point in q_manus - the one with
             # the closest timestamp
             recording = []
-            time_diffs = []
+            time_diffs_myo_imu = []
+            time_diffs_myo_manus = []
             for emg in emg_data:
                 timestamp = emg[-1]
+
+                # Find the closest timestamp in the imu data
+                closest_imu = min(imu_data, key=lambda x: abs(x[-1] - timestamp))
+                time_diffs_myo_imu.append(abs(closest_imu[-1] - timestamp))
+
                 # Find the closest timestamp in the manus data
-                closest = min(manus_data, key=lambda x: abs(x[-1] - timestamp))
-                recording.append(emg[:-1] + closest[:-1])
-                time_diffs.append(abs(closest[-1] - timestamp))
+                closest_manus = min(manus_data, key=lambda x: abs(x[-1] - timestamp))
+                time_diffs_myo_manus.append(abs(closest_manus[-1] - timestamp))
+
+                recording.append(emg[:-1] + closest_imu[:-1] + closest_manus[:-1])
 
             # Ditch the first 1s of data points (warmup)
             recording = recording[MYO_SR:]
 
             print(f"Matched {len(recording)} EMG data points with {len(manus_data)} hand pose samples.")
-            avg_time_diff = float("{:.2f}".format(np.mean(time_diffs)))
-            print(f"Average time difference: {avg_time_diff} ms")
+            avg_time_diff_imu = float("{:.2f}".format(np.mean(time_diffs_myo_imu)))
+            avg_time_diff_manus = float("{:.2f}".format(np.mean(time_diffs_myo_manus)))
+            print(f"Average time difference myo-imu: {avg_time_diff_imu} ms")
+            print(f"Average time difference myo-manus: {avg_time_diff_manus} ms")
 
             # Colour background of the status bar to indicate that the recording is finished
             self.root.status_bar.config(bg=self.root.status_bar_bg)
@@ -426,6 +447,26 @@ class GestureDetail(tk.Frame):
 
         # Switch to inference tab and pass the file path
         self.root.switch_to_inference_from_file(normalized_path)
+
+    def open_inspector(self):
+        global emg_inspector_window
+
+        # Get the normalised path
+        normalized_path = self.get_normalised_path()
+
+        if emg_inspector_window is None:
+            emg_inspector_window = EMGInspectorWindow(normalized_path)
+            # Add on close lambda to reset the window
+            emg_inspector_window.protocol("WM_DELETE_WINDOW", lambda: self.on_inspector_window_close())
+        else:
+            emg_inspector_window.load_file(normalized_path)
+
+    def on_inspector_window_close(self):
+        global emg_inspector_window
+        if emg_inspector_window:
+            emg_inspector_window.destroy()
+            emg_inspector_window = None
+
 
 
 def on_browser_window_close():

@@ -7,8 +7,8 @@ from myo.worker_myo import worker_myo
 from manus.worker_manus import worker_manus
 
 
-def worker_collection(q_myo, q_manus, q_result, q_terminate, q_myo_ready):
-    p_myo = multiprocessing.Process(target=worker_myo, args=(q_myo, q_terminate, q_myo_ready,))
+def worker_collection(q_myo, q_myo_imu, q_manus, q_terminate, q_myo_ready):
+    p_myo = multiprocessing.Process(target=worker_myo, args=(q_myo, q_myo_imu, q_terminate, q_myo_ready,))
     p_manus = multiprocessing.Process(target=worker_manus, args=(q_manus, q_terminate,))
     p_myo.start()
     p_manus.start()
@@ -33,15 +33,14 @@ def worker_collection(q_myo, q_manus, q_result, q_terminate, q_myo_ready):
     # Finished
     p_myo.join(100)
     p_manus.join(100)
-    finished = True
 
 
-def start_recording(q_myo, q_manus, q_result, q_terminate, q_myo_ready):
+def start_recording(q_myo, q_myo_imu, q_manus, q_terminate, q_myo_ready):
     # Clear all queues
     q_myo.empty()
+    q_myo_imu.empty()
     q_manus.empty()
-    q_result.empty()
 
     # Start a new recording
-    p_collection = multiprocessing.Process(target=worker_collection, args=(q_myo, q_manus, q_result, q_terminate, q_myo_ready,))
+    p_collection = multiprocessing.Process(target=worker_collection, args=(q_myo, q_myo_imu, q_manus, q_terminate, q_myo_ready,))
     p_collection.start()

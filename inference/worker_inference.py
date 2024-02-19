@@ -14,7 +14,7 @@ VISUALISER_PORT = 55516
 
 context = zmq.Context()
 
-def worker_myo_receiver(q_myo, q_terminate):
+def worker_myo_receiver(q_myo, q_myo_imu, q_terminate):
     """
     Receive processed myo data and send it to INFERENCE
     :param q_myo: sEMG signals
@@ -26,11 +26,17 @@ def worker_myo_receiver(q_myo, q_terminate):
     pub_socket.bind(f"tcp://127.0.0.1:{LIVE_PUB_PORT}")
     time.sleep(0.2)
 
+    last_imu = None
+
     while q_terminate.empty():
         while not q_myo.empty():
             # print("Myo data: ", q_myo.get())
 
             emg_data = q_myo.get()[:8]
+            while not q_myo_imu.empty():
+                last_imu = q_myo_imu.get()[:10]
+
+            emg_data.extend(last_imu)
             send_data = {"from_file": False, "data": emg_data}
             js = json.dumps(send_data).encode('utf-8')
             pub_socket.send(js)

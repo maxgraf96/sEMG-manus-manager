@@ -7,6 +7,8 @@ import tempfile
 import numpy as np
 import pandas as pd
 
+from constants import FEATURE_VECTOR_DIM, MANUS_LABEL_INDICES
+
 excluded_elements = ["delete_session_button", "theme_toggle_button"]
 
 
@@ -93,7 +95,7 @@ class RepeatedTimer(object):
 def create_visualiser_csv(data):
     """
     Create a CSV file from the data
-    :param data: Numpy array in the shape of (1, sequence_length, 8)
+    :param data: Numpy array in the shape of (1, sequence_length, MODEL_OUTPUT_DIM)
     :return: A path to a temporary csv file matching the following format: Frame,Hand_X,Hand_Y,Hand_Z,Thumb_CMC_X,Thumb_CMC_Y,Thumb_CMC_Z,Thumb_MCP_X,Thumb_MCP_Y,Thumb_MCP_Z,Thumb_DIP_X,Thumb_DIP_Y,Thumb_DIP_Z,Thumb_TIP_X,Thumb_TIP_Y,Thumb_TIP_Z,Index_CMC_X,Index_CMC_Y,Index_CMC_Z,Index_MCP_X,Index_MCP_Y,Index_MCP_Z,Index_PIP_X,Index_PIP_Y,Index_PIP_Z,Index_DIP_X,Index_DIP_Y,Index_DIP_Z,Index_TIP_X,Index_TIP_Y,Index_TIP_Z,Middle_CMC_X,Middle_CMC_Y,Middle_CMC_Z,Middle_MCP_X,Middle_MCP_Y,Middle_MCP_Z,Middle_PIP_X,Middle_PIP_Y,Middle_PIP_Z,Middle_DIP_X,Middle_DIP_Y,Middle_DIP_Z,Middle_TIP_X,Middle_TIP_Y,Middle_TIP_Z,Ring_CMC_X,Ring_CMC_Y,Ring_CMC_Z,Ring_MCP_X,Ring_MCP_Y,Ring_MCP_Z,Ring_PIP_X,Ring_PIP_Y,Ring_PIP_Z,Ring_DIP_X,Ring_DIP_Y,Ring_DIP_Z,Ring_TIP_X,Ring_TIP_Y,Ring_TIP_Z,Pinky_CMC_X,Pinky_CMC_Y,Pinky_CMC_Z,Pinky_MCP_X,Pinky_MCP_Y,Pinky_MCP_Z,Pinky_PIP_X,Pinky_PIP_Y,Pinky_PIP_Z,Pinky_DIP_X,Pinky_DIP_Y,Pinky_DIP_Z,Pinky_TIP_X,Pinky_TIP_Y,Pinky_TIP_Z
     """
 
@@ -114,6 +116,24 @@ def create_visualiser_csv(data):
                 "Pinky_TIP_Z"])
         for i in range(data.shape[1]):
             current_row = list(data[0][i])
+
+            index_spread = current_row[0]
+            index_mcp = current_row[1]
+            index_pip = current_row[2]
+            index_dip = current_row[3]
+            middle_spread = current_row[4]
+            middle_mcp = current_row[5]
+            middle_pip = current_row[6]
+            middle_dip = current_row[7]
+            ring_spread = current_row[8]
+            ring_mcp = current_row[9]
+            ring_pip = current_row[10]
+            ring_dip = current_row[11]
+            pinky_spread = current_row[12]
+            pinky_mcp = current_row[13]
+            pinky_pip = current_row[14]
+            pinky_dip = current_row[15]
+
             writer.writerow([
                 # Frame, Hand_X, Hand_y, Hand_Z
                 "0", "0", "0", "0",
@@ -127,46 +147,46 @@ def create_visualiser_csv(data):
                 "0", "0", "0",
 
                 # Index_CMC_X, Index_CMC_Y, Index_CMC_Z
-                "0", "0", "0",
+                "0", index_spread, "0",
                 # Index_MCP_X, Index_MCP_Y, Index_MCP_Z
-                current_row[0], "0", "0",
+                index_mcp, "0", "0",
                 # Index_PIP_X, Index_PIP_Y, Index_PIP_Z
-                current_row[1], "0", "0",
+                index_pip, "0", "0",
                 # Index_DIP_X, Index_DIP_Y, Index_DIP_Z
-                "0", "0", "0",
+                index_dip, "0", "0",
                 # Index_TIP_X, Index_TIP_Y, Index_TIP_Z
                 "0", "0", "0",
 
                 # Middle_CMC_X, Middle_CMC_Y, Middle_CMC_Z
-                "0", "0", "0",
+                "0", middle_spread, "0",
                 # Middle_MCP_X, Middle_MCP_Y, Middle_MCP_Z
-                current_row[2], "0", "0",
+                middle_mcp, "0", "0",
                 # Middle_PIP_X, Middle_PIP_Y, Middle_PIP_Z
-                current_row[3], "0", "0",
+                middle_pip, "0", "0",
                 # Middle_DIP_X, Middle_DIP_Y, Middle_DIP_Z
-                "0", "0", "0",
+                middle_dip, "0", "0",
                 # Middle_TIP_X, Middle_TIP_Y, Middle_TIP_Z
                 "0", "0", "0",
 
                 # Ring_CMC_X, Ring_CMC_Y, Ring_CMC_Z
-                "0", "0", "0",
+                "0", ring_spread, "0",
                 # Ring_MCP_X, Ring_MCP_Y, Ring_MCP_Z
-                current_row[4], "0", "0",
+                ring_mcp, "0", "0",
                 # Ring_PIP_X, Ring_PIP_Y, Ring_PIP_Z
-                current_row[5], "0", "0",
+                ring_pip, "0", "0",
                 # Ring_DIP_X, Ring_DIP_Y, Ring_DIP_Z
-                "0", "0", "0",
+                ring_dip, "0", "0",
                 # Ring_TIP_X, Ring_TIP_Y, Ring_TIP_Z
                 "0", "0", "0",
 
                 # Pinky_CMC_X, Pinky_CMC_Y, Pinky_CMC_Z
-                "0", "0", "0",
+                "0", pinky_spread, "0",
                 # Pinky_MCP_X, Pinky_MCP_Y, Pinky_MCP_Z
-                current_row[6], "0", "0",
+                pinky_mcp, "0", "0",
                 # Pinky_PIP_X, Pinky_PIP_Y, Pinky_PIP_Z
-                current_row[7], "0", "0",
+                pinky_pip, "0", "0",
                 # Pinky_DIP_X, Pinky_DIP_Y, Pinky_DIP_Z
-                "0", "0", "0",
+                pinky_dip, "0", "0",
                 # Pinky_TIP_X, Pinky_TIP_Y, Pinky_TIP_Z
                 "0", "0", "0"
             ])
@@ -193,7 +213,7 @@ def extract_hand_pose_data_from_gt_csv(filename):
     """
     Extract hand pose data from a ground truth CSV file - the ones containing EMG data and hand pose data
     :param filename: Path to the CSV file
-    :return: Numpy array in the shape of (1, sequence_length, 8)
+    :return: Numpy array in the shape of (1, sequence_length, MODEL_OUTPUT_DIM)
     """
 
     data = pd.read_csv(filename, index_col=False)
@@ -201,9 +221,9 @@ def extract_hand_pose_data_from_gt_csv(filename):
     data = np.expand_dims(data, axis=0)
 
     # Discard EMG columns
-    data = data[:, :, 8:]
+    data = data[:, :, FEATURE_VECTOR_DIM:]
 
-    manus_label_indices = [5, 6, 9, 10, 13, 14, 17, 18]
-    data = data[:, :, manus_label_indices]
+    # Take only the indices we're interested in
+    data = data[:, :, MANUS_LABEL_INDICES]
 
     return data

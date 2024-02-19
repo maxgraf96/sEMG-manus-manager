@@ -11,6 +11,7 @@ import zmq
 import helpers
 from components import gesture_detail
 from config import FONT
+from constants import FEATURE_VECTOR_DIM
 from inference.worker_inference import worker_myo_receiver, worker_inference_res_to_visualiser
 from myo.worker_myo import worker_myo
 from components.gesture_detail import show_visualisation
@@ -74,8 +75,8 @@ class InferenceFromFile(tk.Frame):
             send_data = {"from_file": True, "data": []}
             for line in file:
                 line_data = line.strip().split(',')
-                # Parse first 8 values as EMG data
-                emg_data = [int(float(x)) for x in line_data[:8]]
+                # Parse first FEATURE_VECTOR_DIM values as EMG data
+                emg_data = [int(float(x)) for x in line_data[:FEATURE_VECTOR_DIM]]
                 send_data["data"].append(emg_data)
 
             js = json.dumps(send_data).encode('utf-8')
@@ -87,6 +88,13 @@ class InferenceFromFile(tk.Frame):
 
             data = result["data"]
             shape = result["shape"]
+            if shape[1] == 1:
+                print("Inference socket clogged with real time data, skipping...")
+                while shape[1] == 1:
+                    result = self.inference_frame.sub_socket.recv()
+                    result = json.loads(result.decode("utf-8"))
+                    data = result["data"]
+                    shape = result["shape"]
             print("Received inference result with shape:", shape)
 
             data = np.array(data).reshape(shape)
@@ -105,6 +113,7 @@ class InferenceFromLive(tk.Frame):
         self.p_myo = None
         self.p_myo_receiver = None
         self.q_myo = None
+        self.q_myo_imu = None
         self.q_terminate = None
         self.q_myo_ready = None
         self.root = root
@@ -144,13 +153,14 @@ class InferenceFromLive(tk.Frame):
         print("Infer from live data")
 
         self.q_myo = multiprocessing.Queue()
+        self.q_myo_imu = multiprocessing.Queue()
         self.q_terminate = multiprocessing.Queue()
         self.q_myo_ready = multiprocessing.Queue()
 
         # Many myo data collection process - same as in data_collection.py
-        self.p_myo = multiprocessing.Process(target=worker_myo, args=(self.q_myo, self.q_terminate, self.q_myo_ready, ))
+        self.p_myo = multiprocessing.Process(target=worker_myo, args=(self.q_myo, self.q_myo_imu, self.q_terminate, self.q_myo_ready, ))
         # Custom myo receiver process
-        self.p_myo_receiver = multiprocessing.Process(target=worker_myo_receiver, args=(self.q_myo, self.q_terminate, ))
+        self.p_myo_receiver = multiprocessing.Process(target=worker_myo_receiver, args=(self.q_myo, self.q_myo_imu, self.q_terminate, ))
         self.p_inference_visualiser_bridge = multiprocessing.Process(target=worker_inference_res_to_visualiser, args=(self.q_terminate, ))
 
         self.p_myo.start()

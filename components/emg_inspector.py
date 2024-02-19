@@ -1,0 +1,97 @@
+import tkinter as tk
+from tkinter import ttk
+import numpy as np
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from constants import FEATURE_VECTOR_DIM, MODEL_OUTPUT_DIM, MYO_SR
+
+class EMGInspectorWindow(tk.Toplevel):
+    def __init__(self, file_path):
+        super().__init__()
+        self.title("EMG Inspector")
+        self.geometry("1200x600")  # Increased width to accommodate two plots
+        self.resizable(True, True)
+
+        self.emg_inspector = EMGInspector(self, file_path=file_path)
+        self.emg_inspector.pack(fill=tk.BOTH, expand=True)
+
+    def load_file(self, file_path):
+        self.emg_inspector.file_path = file_path
+
+        # Reset the widgets
+        for widget in self.emg_inspector.winfo_children():
+            widget.destroy()
+
+        self.emg_inspector.create_widgets()
+        self.lift()
+
+
+class EMGInspector(tk.Frame):
+    def __init__(self, root, file_path):
+        super().__init__(root)
+        self.root = root
+        self.file_path = file_path
+        tk.Frame.__init__(self, root)
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        if self.file_path is None:
+            return
+
+        # Read csv file
+        self.data = np.genfromtxt(self.file_path, delimiter=",", skip_header=0)
+        self.channels = self.data.shape[1]  # Assuming each column is a channel
+
+        radio_frame = tk.Frame(self)
+        radio_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+
+        self.channel_var = tk.IntVar(value=0)  # Default to first channel
+        for i in range(self.channels):
+            tk.Radiobutton(radio_frame, text=f"{i + 1}", variable=self.channel_var, value=i,
+                           command=self.update_plot).pack(side=tk.LEFT)
+
+        # Matplotlib Figure and Canvas
+        self.fig = Figure(figsize=(10, 4), dpi=100)  # Adjusted size for two plots
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        self.update_plot()
+
+    def update_plot(self, event=None):
+        channel_index = self.channel_var.get()
+        sample = self.data[:, int(channel_index)].copy()
+
+        self.fig.clear()
+
+        # Raw data plot
+        ax1 = self.fig.add_subplot(2, 2, 1)
+        ax1.plot(sample)
+        ax1.set_title(f'EMG Data - Channel {self.channel_var.get() + 1}')
+        ax1.set_xlabel('Time (samples)')
+        ax1.set_ylabel('Amplitude')
+
+        # Spectrogram
+        ax2 = self.fig.add_subplot(2, 2, 2)
+        Pxx, freqs, bins, im = ax2.specgram(sample, NFFT=MYO_SR // 2, Fs=MYO_SR, noverlap=20, cmap='plasma')
+        ax2.set_title(f'Spectrogram - Channel {self.channel_var.get() + 1}')
+        ax2.set_xlabel('Time (s)')
+        ax2.set_ylabel('Frequency (Hz)')
+        self.fig.colorbar(im, ax=ax2, orientation='vertical', label='Intensity dB')
+
+        # Peak frequency
+        ax3 = self.fig.add_subplot(2, 2, 3)
+        # For each timestep from the spectrogram, find the frequency with the highest intensity
+        peak_freqs = np.argmax(Pxx, axis=0)
+        ax3.plot(bins, freqs[peak_freqs])
+        ax3.set_title(f'Peak Frequency - Channel {self.channel_var.get() + 1}')
+        ax3.set_xlabel('Time (s)')
+        ax3.set_ylabel('Frequency (Hz)')
+        ax3.set_ylim(0, 100)
+
+        self.canvas.draw()
+
+        # Scale the plot to fit the window
+        self.canvas.get_tk_widget().pack_configure(fill=tk.BOTH, expand=True)
+
