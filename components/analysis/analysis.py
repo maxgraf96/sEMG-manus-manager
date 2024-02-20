@@ -37,7 +37,7 @@ class AnalysisFrame(tk.Frame):
         main_frame = tk.Frame(self, name="testoo", bg=self.root.colour_config["bg"])
 
         # Features to include as options
-        features = ["RMS", "MAV", "Variance", "Standard Deviation", "Peak Frequency"]
+        features = ["RMS", "MAV", "Variance", "Standard Deviation", "Peak Frequency", "EMG Raw"]
 
         # Frame for checkboxes
         checkbox_frame = tk.Frame(main_frame, bg=self.root.colour_config["bg"])
@@ -132,6 +132,11 @@ class AnalysisFrame(tk.Frame):
             included_features = [feature for feature, var in self.feature_vars.items() if var.get()]
 
             features_vector = []
+
+            # Just orig data
+            if "EMG Raw" in included_features:
+                features_vector.append(sample)
+
             # Time-domain features
             if "MAV" in included_features:
                 mav = np.mean(np.abs(sample), axis=0)
@@ -189,7 +194,7 @@ class AnalysisFrame(tk.Frame):
             gesture_type, rec = data_np[i]
             rec_samples = rec[:, :FEATURE_VECTOR_DIM]
             rec_length = rec.shape[0]
-            for start in range(0, rec_length - DATA_LEN, DATASET_SHIFT_SIZE * 20):
+            for start in range(0, rec_length - DATA_LEN, DATASET_SHIFT_SIZE * 5):
                 sample = rec_samples[start: start + DATA_LEN]
                 # Append to list
                 proc_samples.append(sample)
