@@ -9,6 +9,7 @@ from PIL import ImageTk
 from cefpython3 import cefpython as cef
 
 from components.VerticallyScrolledFrame import VerticalScrolledFrame
+from components.analysis.analysis import AnalysisFrame
 from components.gesture_detail import p_visualiser, q_visualiser, on_browser_window_close, \
     get_browser_open
 from inference.inference import InferenceFrame
@@ -55,10 +56,12 @@ class App(tk.Tk):
         # Create two frames for the two tabs
         tab1_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
         tab2_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
+        tab3_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
 
         # Add frames to notebook as individual tabs
         self.notebook.add(tab1_frame, text='Data Collection')
         self.notebook.add(tab2_frame, text='Inference')
+        self.notebook.add(tab3_frame, text='Analysis')
 
         # DATA COLLECTION TAB
         self.sidebar = Sidebar(self, tab1_frame, self.load_user_data)
@@ -71,7 +74,14 @@ class App(tk.Tk):
         self.inference_frame = InferenceFrame(tab2_frame, self)
         self.inference_frame.pack(fill=tk.BOTH, expand=True)
 
+        # ANALYSIS TAB
+        self.analysis_frame = AnalysisFrame(tab3_frame, self)
+        self.analysis_frame.pack(fill=tk.BOTH, expand=True)
+
         self.notebook.pack(fill=tk.BOTH, expand=True)
+
+        # Switch to analysis tab
+        self.notebook.select(2)
 
     def update_total_datapoints(self):
         self.datapoints.set(f"Total number of datapoints: {get_total_number_of_datapoints()}")
