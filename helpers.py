@@ -7,7 +7,7 @@ import tempfile
 import numpy as np
 import pandas as pd
 
-from constants import FEATURE_VECTOR_DIM, MANUS_LABEL_INDICES
+from constants import FEATURE_VECTOR_DIM, MANUS_LABEL_INDICES, NUM_FEATURES_PER_SAMPLE
 
 excluded_elements = ["delete_session_button", "theme_toggle_button"]
 
@@ -221,7 +221,7 @@ def extract_hand_pose_data_from_gt_csv(filename):
     data = np.expand_dims(data, axis=0)
 
     # Discard EMG columns
-    data = data[:, :, FEATURE_VECTOR_DIM:]
+    data = data[:, :, NUM_FEATURES_PER_SAMPLE:]
 
     # Take only the indices we're interested in
     data = data[:, :, MANUS_LABEL_INDICES]

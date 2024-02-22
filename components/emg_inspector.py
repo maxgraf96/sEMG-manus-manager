@@ -3,17 +3,20 @@ from tkinter import ttk
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.transforms import BboxBase, Bbox
+
 from constants import FEATURE_VECTOR_DIM, MODEL_OUTPUT_DIM, MYO_SR, DATASET_SHIFT_SIZE
 
 
 class EMGInspectorWindow(tk.Toplevel):
-    def __init__(self, file_path):
+    def __init__(self, file_path, root):
         super().__init__()
+        self.root = root
         self.title("EMG Inspector")
-        self.geometry("1200x600")  # Increased width to accommodate two plots
+        self.geometry("1600x900")
         self.resizable(True, True)
 
-        self.emg_inspector = EMGInspector(self, file_path=file_path)
+        self.emg_inspector = EMGInspector(self.root, self, file_path)
         self.emg_inspector.pack(fill=tk.BOTH, expand=True)
 
     def load_file(self, file_path):
@@ -28,11 +31,12 @@ class EMGInspectorWindow(tk.Toplevel):
 
 
 class EMGInspector(tk.Frame):
-    def __init__(self, root, file_path):
+    def __init__(self, root, parent, file_path):
         super().__init__(root)
         self.root = root
+        self.parent = parent
         self.file_path = file_path
-        tk.Frame.__init__(self, root)
+        tk.Frame.__init__(self, parent)
 
         self.create_widgets()
 
@@ -40,23 +44,39 @@ class EMGInspector(tk.Frame):
         if self.file_path is None:
             return
 
+        # Set background to white
+        self.config(bg=self.root.colour_config["bg"])
+
+        # Add title label to the top of the window
+        title_label = tk.Label(self, text="EMG Inspector", font=("Arial", 24), bg=self.root.colour_config["bg"])
+        title_label.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+
+        # Add label for file name
+        file_label = tk.Label(self, text=f"File: {self.file_path}", bg=self.root.colour_config["bg"],
+                             fg=self.root.colour_config["fg"])
+        file_label.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+
         # Read csv file
         self.data = np.genfromtxt(self.file_path, delimiter=",", skip_header=0)
         self.channels = self.data.shape[1]  # Assuming each column is a channel
 
-        radio_frame = tk.Frame(self)
+        radio_frame = tk.Frame(self, bg=self.root.colour_config["bg"])
         radio_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+
+        radio_label = tk.Label(radio_frame, text="Select Channel: ", bg=self.root.colour_config["bg"],
+                               fg=self.root.colour_config["fg"])
+        radio_label.pack(side=tk.LEFT)
 
         self.channel_var = tk.IntVar(value=0)  # Default to first channel
         for i in range(self.channels):
-            tk.Radiobutton(radio_frame, text=f"{i + 1}", variable=self.channel_var, value=i,
+            tk.Radiobutton(radio_frame, text=f"{i + 1}", variable=self.channel_var, value=i, bg=self.root.colour_config["bg"],
                            command=self.update_plot).pack(side=tk.LEFT)
 
         # Matplotlib Figure and Canvas
-        self.fig = Figure(figsize=(10, 4), dpi=100)  # Adjusted size for two plots
+        self.fig = Figure(figsize=(10, 6), dpi=100)  # Adjusted size for two plots
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.draw()
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=False, anchor='center')
 
         self.update_plot()
 
@@ -102,11 +122,10 @@ class EMGInspector(tk.Frame):
         x = np.arange(0, len(sample), DATASET_SHIFT_SIZE) / MYO_SR
         ax4.plot(x, rms, linewidth=0.5)
         ax4.set_title(f'RMS - Channel {self.channel_var.get() + 1}')
-        ax4.set_xticks([])
+        # ax4.set_xticks([])
         ax4.set_ylabel('Amplitude')
 
-        self.canvas.draw()
+        self.fig.tight_layout(pad=3.0, w_pad=3.0, h_pad=3.0)
 
-        # Scale the plot to fit the window
-        self.canvas.get_tk_widget().pack_configure(fill=tk.BOTH, expand=True)
+        self.canvas.draw()
 

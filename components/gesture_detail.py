@@ -197,6 +197,9 @@ class GestureDetail(tk.Frame):
         self.recordings_listbox.bind("<Delete>", self.delete_recording_listbox)
         self.recordings_listbox.bind("<Button-3>", self.on_right_click)
 
+        # On left click, open the selected recording
+        self.recordings_listbox.bind("<Button-1>", lambda event: self.open_inspector_if_open())
+
         # Load sessions for this gesture
         self.load_recordings()
 
@@ -455,7 +458,7 @@ class GestureDetail(tk.Frame):
         normalized_path = self.get_normalised_path()
 
         if emg_inspector_window is None:
-            emg_inspector_window = EMGInspectorWindow(normalized_path)
+            emg_inspector_window = EMGInspectorWindow(normalized_path, self.root)
             # Add on close lambda to reset the window
             emg_inspector_window.protocol("WM_DELETE_WINDOW", lambda: self.on_inspector_window_close())
         else:
@@ -466,6 +469,11 @@ class GestureDetail(tk.Frame):
         if emg_inspector_window:
             emg_inspector_window.destroy()
             emg_inspector_window = None
+
+    def open_inspector_if_open(self):
+        global emg_inspector_window
+        if emg_inspector_window is not None:
+            self.open_inspector()
 
 
 

@@ -81,7 +81,7 @@ class App(tk.Tk):
         self.notebook.pack(fill=tk.BOTH, expand=True)
 
         # Switch to analysis tab
-        self.notebook.select(2)
+        self.notebook.select(0)
 
     def update_total_datapoints(self):
         self.datapoints.set(f"Total number of datapoints: {get_total_number_of_datapoints()}")
