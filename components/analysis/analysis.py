@@ -10,6 +10,8 @@ from scipy import signal
 from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+import tkinter.messagebox as msgbox
+from tkinter import ttk
 
 from config import FONT
 from constants import NUM_FEATURES_PER_SAMPLE, DATA_LEN, DATASET_SHIFT_SIZE, FEATURE_VECTOR_DIM, MYO_SR
@@ -52,26 +54,65 @@ class AnalysisFrame(tk.Frame):
         checkbox_frame = tk.Frame(main_frame, bg=self.root.colour_config["bg"])
         checkbox_frame.pack_configure(pady=10, anchor='w')
 
-        for feature in features:
-            self.feature_vars[feature] = tk.BooleanVar(value=False)  # Default all features disabled
-            tk.Checkbutton(checkbox_frame, text=feature, var=self.feature_vars[feature],
-                           bg=self.root.colour_config["bg"], fg=self.root.colour_config["fg"]).pack(anchor='w')
+        # Create a checkbox for each feature, use 2 columns
+        for i, feature in enumerate(features):
+            var = tk.IntVar(value=0)
+            self.feature_vars[feature] = var
+            checkbox = tk.Checkbutton(checkbox_frame, text=feature, variable=var, bg=self.root.colour_config["bg"],
+                                      fg=self.root.colour_config["fg"])
+            checkbox.grid(row=i // 2, column=i % 2, sticky='w')
 
         # Data len var
-        data_len_analysis = tk.IntVar(value=DATA_LEN)
-        data_len_label = tk.Label(main_frame, text=f"Data Length: {data_len_analysis} samples", font=(FONT, 12), bg=self.root.colour_config["bg"],
+        self.data_len_analysis = tk.IntVar(value=DATA_LEN)
+        data_len_label = tk.Label(main_frame, text=f"Data Length: {self.data_len_analysis.get()} samples", font=(FONT, 12), bg=self.root.colour_config["bg"],
                                     fg=self.root.colour_config["fg"])
         data_len_label.pack_configure(pady=10, anchor='w')
+        self.last_data_len = DATA_LEN
+        # Data len slider
+        def dl_slider_update(e):
+            value = self.data_len_analysis.get()
+            if value < 100:
+                # Round to nearest 10
+                value = int(round(value / 10.0)) * 10
+            else:
+                # Round to nearest 100
+                value = int(round(value / 100.0)) * 100
+            self.data_len_analysis.set(value)
+            data_len_label.config(text=f"Data Length: {self.data_len_analysis.get()} samples")
 
+        data_len_slider = tk.Scale(main_frame, from_=1, to=1000, orient='horizontal', variable=self.data_len_analysis,
+                                      bg=self.root.colour_config["bg"], fg=self.root.colour_config["fg"], command=lambda e: dl_slider_update(e))
+        data_len_slider.pack_configure(pady=10, anchor='w')
+        data_len_slider.config(length=200)
+
+        # Num components slider
+        self.n_components_pca = tk.IntVar(value=3)
+        n_components_label = tk.Label(main_frame, text=f"Number of Principal Components: {self.n_components_pca.get()}", font=(FONT, 12), bg=self.root.colour_config["bg"],
+                                    fg=self.root.colour_config["fg"])
+        n_components_label.pack_configure(pady=10, anchor='w')
+        # Num components slider
+        n_components_slider = tk.Scale(main_frame, from_=1, to=20, orient='horizontal', variable=self.n_components_pca,
+                                        bg=self.root.colour_config["bg"], fg=self.root.colour_config["fg"], command=lambda e: n_components_label.config(text=f"Number of Principal Components: {self.n_components_pca.get()}"))
+        n_components_slider.pack_configure(pady=10, anchor='w')
+        n_components_slider.config(length=200)
+
+        # Make grid with button and progressbar
+        buttongrid = tk.Frame(main_frame, bg=self.root.colour_config["bg"])
+        buttongrid.pack_configure(pady=10, anchor='w')
 
         # Add button for PCA analysis
-        pca_button = tk.Button(main_frame, text="Run PCA", command=self.run_pca_analysis,
+        pca_button = tk.Button(buttongrid, text="Run PCA", command=self.run_pca_analysis,
                                bg=self.root.colour_config["bg"],
-                               fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
+                               fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1, width=20)
 
-        pca_button.pack_configure(pady=10, ipady=5, anchor='w')
-        # Make button 200px wide
-        pca_button.config(width=20)
+        # Progressbar
+        self.progressbar = tk.ttk.Progressbar(buttongrid, orient='horizontal', length=200, mode='determinate')
+
+        pca_button.grid(row=0, column=0, sticky='w')
+        self.progressbar.grid(row=0, column=1, sticky='w', padx=24)
+        # Hide progressbar
+        self.progressbar.grid_forget()
+
 
         # Pack the frame
         main_frame.pack_configure(side='left', fill='both', expand=False, anchor='nw', padx=20, pady=20)
@@ -79,13 +120,23 @@ class AnalysisFrame(tk.Frame):
 
 
     def run_pca_analysis(self):
+        if not any(var.get() for var in self.feature_vars.values()):
+            # Show error message
+            msgbox.showinfo("Ehm", "Please select at least one feature to include in the analysis.")
+            return
+
+        # Show progressbar
+        self.progressbar.grid(row=0, column=1, sticky='w', padx=24)
+
+        print("")
+        print("")
         print("Running PCA analysis with features: ",
               [feature for feature, var in self.feature_vars.items() if var.get()])
         print("Loading files...")
 
         # Load all CSVs from the user_data folder
-        if self.samples is None:
-            self.samples, self.gesture_types, _ = load_all_files()
+        if self.samples is None or self.data_len_analysis.get() != self.last_data_len:
+            self.samples, self.gesture_types, _ = load_all_files(data_len=self.data_len_analysis.get(), progressbar=self.progressbar)
 
             # Get minimum length of all samples
             min_length = min([sample.shape[0] for sample in self.samples])
@@ -103,7 +154,7 @@ class AnalysisFrame(tk.Frame):
         scaled_features = scaler.fit_transform(features)
 
         # In 3D
-        pca = PCA(n_components=8)
+        pca = PCA(n_components=self.n_components_pca.get())
         principal_components = pca.fit_transform(scaled_features)
         total_var = sum(pca.explained_variance_ratio_) * 100
         fig = px.scatter_3d(
@@ -120,12 +171,30 @@ class AnalysisFrame(tk.Frame):
         print("Explained variance ratio:", pca.explained_variance_ratio_)
         print("Total explained variance ratio:", sum(pca.explained_variance_ratio_))
 
+        # Update last data len
+        self.last_data_len = self.data_len_analysis.get()
+
+        # Hide progressbar
+        self.progressbar.grid_forget()
+
     def extract_features(self):
         """
         Extracts time and frequency domain features from EMG samples.
         :return: numpy array of shape (n_samples, n_extracted_features)
         """
         extracted_features = []
+
+        # Peak frequency stuff
+        sample_length = self.samples[0].shape[0]
+        # Create an array for input data and an output array
+        input_array = pyfftw.empty_aligned(sample_length, dtype='complex128')
+        output_array = pyfftw.empty_aligned(sample_length, dtype='complex128')
+        # Create an FFT object
+        fft_object = pyfftw.FFTW(input_array, output_array)
+
+        self.progressbar["value"] = 0
+        self.progressbar.step(0)
+        counter = 0
 
         for sample in tqdm(self.samples):
             # Check which features are included in the var
@@ -169,12 +238,6 @@ class AnalysisFrame(tk.Frame):
             # Frequency-domain features
             if "Peak Frequency" in included_features:
                 psd = []
-                # Create an array for input data and an output array
-                input_array = pyfftw.empty_aligned(400, dtype='complex128')
-                output_array = pyfftw.empty_aligned(400, dtype='complex128')
-
-                # Create an FFT object
-                fft_object = pyfftw.FFTW(input_array, output_array)
 
                 for channel_data in sample.T:
                     # Fill the input array with your signal
@@ -197,10 +260,15 @@ class AnalysisFrame(tk.Frame):
             features_vector = np.concatenate((features_vector), axis=None)
             extracted_features.append(features_vector)
 
+            counter += 1
+            if counter % 1000 == 0:
+                self.progressbar["value"] = 100 * (counter / len(self.samples))
+                self.progressbar.update()
+
         return np.array(extracted_features)
 
 
-def load_all_files(dir="user_data"):
+def load_all_files(dir="user_data", data_len=DATA_LEN, progressbar=None):
     data_recordings = []
     gesture_types = []
 
@@ -225,11 +293,15 @@ def load_all_files(dir="user_data"):
         gesture_type, rec = recordings_np[i]
         rec_samples = rec[:, :FEATURE_VECTOR_DIM]
         rec_length = rec.shape[0]
-        for start in range(0, rec_length - DATA_LEN, DATASET_SHIFT_SIZE):
-            sample = rec_samples[start: start + DATA_LEN]
+        for start in range(0, rec_length - data_len, DATASET_SHIFT_SIZE):
+            sample = rec_samples[start: start + data_len]
             # Append to list
             proc_samples.append(sample)
             gesture_types.append(gesture_type)
+
+        if progressbar is not None:
+            progressbar["value"] = (i + 1) / len(recordings_np) * 100
+            progressbar.update()
 
     all_in_one = np.array(proc_samples)
     print(f"Got {len(data_recordings)} recordings and approximately {len(all_in_one)} samples.")
