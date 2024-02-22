@@ -49,14 +49,14 @@ class InferenceFromFile(tk.Frame):
 
     def create_widgets(self):
         top_frame = tk.Frame(self, bg=self.root.colour_config["bg"])
-        top_frame.pack(fill=tk.X)
-        tk.Label(top_frame, text="File", font=(FONT, 16), bg=self.root.colour_config["bg"],
+        top_frame.pack_configure(fill=tk.X, pady=10)
+        tk.Label(top_frame, text="From File", font=(FONT, 16), bg=self.root.colour_config["bg"],
                  fg=self.root.colour_config["fg"]).pack()
 
         self.browse_button = tk.Button(self, text="Select File", bg=self.root.colour_config["bg"],
                                        fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1,
                                        command=self.browse)
-        self.browse_button.pack_configure(pady=10, ipady=5, fill=tk.X)
+        self.browse_button.pack_configure(pady=10, ipady=5)
 
         self.file_label = tk.Label(self, text="File: ", bg=self.root.colour_config["bg"],
                                    fg=self.root.colour_config["fg"])
@@ -65,7 +65,10 @@ class InferenceFromFile(tk.Frame):
         self.inference_button = tk.Button(self, text="Run Inference", command=self.run_inference_on_file,
                                           bg=self.root.colour_config["bg"],
                                           fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
-        self.inference_button.pack_configure(pady=20, ipady=5, fill=tk.X)
+        self.inference_button.pack_configure(pady=20, ipady=5)
+
+        self.browse_button.config(width=40)
+        self.inference_button.config(width=40)
 
     def run_inference_on_file(self, filepath):
         print("Running inference on file " + self.file_label.cget("text"))
@@ -126,18 +129,22 @@ class InferenceFromLive(tk.Frame):
 
     def create_widgets(self):
         top_frame = tk.Frame(self, bg=self.root.colour_config["bg"])
-        top_frame.pack(fill=tk.X)
+        top_frame.pack_configure(fill=tk.X, pady=10)
         tk.Label(top_frame, text="From Live Data", font=(FONT, 16), bg=self.root.colour_config["bg"],
                  fg=self.root.colour_config["fg"]).pack()
 
         self.inference_button = tk.Button(self, text="Run Live Inference", command=self.infer,
                                           bg=self.root.colour_config["bg"],
                                           fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
-        self.inference_button.pack_configure(pady=10, ipady=5, fill=tk.X)
+        self.inference_button.pack_configure(pady=10, ipady=5, anchor=tk.CENTER)
         self.stop_inference_button = tk.Button(self, text="Stop Live Inference", command=self.stop_inference,
                                                   bg=self.root.colour_config["bg"],
                                                   fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
-        self.stop_inference_button.pack_configure(pady=10, ipady=5, fill=tk.X)
+        self.stop_inference_button.pack_configure(pady=10, ipady=5)
+
+        self.inference_button.config(width=40)
+        self.stop_inference_button.config(width=40)
+
 
     def check_terminate_live_inference(self):
         if self.should_terminate_live_inference:

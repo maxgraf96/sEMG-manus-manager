@@ -3,7 +3,8 @@ from tkinter import ttk
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from constants import FEATURE_VECTOR_DIM, MODEL_OUTPUT_DIM, MYO_SR
+from constants import FEATURE_VECTOR_DIM, MODEL_OUTPUT_DIM, MYO_SR, DATASET_SHIFT_SIZE
+
 
 class EMGInspectorWindow(tk.Toplevel):
     def __init__(self, file_path):
@@ -89,6 +90,20 @@ class EMGInspector(tk.Frame):
         ax3.set_xlabel('Time (s)')
         ax3.set_ylabel('Frequency (Hz)')
         ax3.set_ylim(0, 100)
+
+        # RMS
+        # thin linewidth
+        ax4 = self.fig.add_subplot(2, 2, 4)
+        # Get RMS for each window
+        rms = []
+        for i in range(0, len(sample), DATASET_SHIFT_SIZE):
+            window = sample[i:i + MYO_SR]
+            rms.append(np.sqrt(np.mean(window ** 2)))
+        x = np.arange(0, len(sample), DATASET_SHIFT_SIZE) / MYO_SR
+        ax4.plot(x, rms, linewidth=0.5)
+        ax4.set_title(f'RMS - Channel {self.channel_var.get() + 1}')
+        ax4.set_xticks([])
+        ax4.set_ylabel('Amplitude')
 
         self.canvas.draw()
 
