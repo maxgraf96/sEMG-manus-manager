@@ -5,7 +5,8 @@ from tkinter import RIGHT
 
 import send2trash
 
-from components.gesture_detail import GESTURES, GestureDetail
+from components.gesture_detail import GestureDetail
+from constants import GESTURES
 from config import FONT
 
 

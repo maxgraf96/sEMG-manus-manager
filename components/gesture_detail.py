@@ -2,6 +2,7 @@ import datetime
 import multiprocessing
 import os
 import signal
+import socket
 import subprocess
 import time
 import tkinter as tk
@@ -13,39 +14,11 @@ import send2trash
 
 import helpers
 from components.browser import BrowserFrame
+from components.emg_inspector import EMGInspectorWindow
 from config import FONT, VISUALISER_PATH
+from constants import XRMI_GESTURES
 from helpers import RepeatedTimer
-from myo.data_collection import start_recording
-from components.emg_inspector import EMGInspector, EMGInspectorWindow
-
-GESTURES = [
-    # GENERAL
-    'flexext_fist',
-    'flexext_thumb',
-    'flexext_index',
-    'flexext_middle',
-    'flexext_ring',
-    'flexext_pinky',
-    'finger_tap_surface',
-    'thumbs_up',
-    'point_index',
-    'ab_add_all',
-    'ab_add_thumb_index',
-    'ab_add_index_middle',
-    'ab_add_middle_ring',
-    'ab_add_ring_pinky',
-    # XRMI
-    'tap_thumb',
-    'tap_index',
-    'tap_middle',
-    'tap_ring',
-    'tap_pinky',
-    'pinched_tap_thumb_index',
-    'pinched_tap_index_middle',
-    'pinched_tap_middle_ring',
-    'pinched_tap_ring_pinky',
-    'melody'
-]
+from networking import netz_connector
 
 # Visualiser setup -> that's the Three.js app
 # Queue for interacting with the visualiser
@@ -67,6 +40,15 @@ q_myo_imu = multiprocessing.Queue()
 
 # MANUS setup
 q_manus = multiprocessing.Queue()
+
+# Global socket for Unity communication
+
+unity_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+unity_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+interfaces = socket.getaddrinfo(host=socket.gethostname(), port=None, family=socket.AF_INET)
+allips = [ip[-1][0] for ip in interfaces]
+# allips.append("127.0.0.1")
+
 
 
 def visualiser_process(q_visualiser):
@@ -287,6 +269,22 @@ class GestureDetail(tk.Frame):
         os.startfile(os.path.join(session_folder, selected_filename))
 
     def start_new_recording(self, speed: str = 'medium'):
+        # If we're doing XRMI gestures we need to notify Netz
+        if self.gesture in XRMI_GESTURES:
+            # Message content is the name of the gesture (self.gesture)
+            message = self.gesture.encode('utf-8')
+
+            for ip in allips:
+                print(f'sending on {ip}')
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)  # UDP
+                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+                sock.bind((ip, 0))
+                sock.sendto(message, ("255.255.255.255", 11000))
+                sock.close()
+
+            # Sleep for a bit until Unity got the message
+            time.sleep(1)
+
         # Helper q to terminate the recording
         q_terminate = multiprocessing.Queue()
         # Helper q to check if the myo is ready
@@ -298,12 +296,13 @@ class GestureDetail(tk.Frame):
         q_myo_imu.empty()
         q_manus.empty()
 
+        # TODO reactivate those
         # Start a new recording
-        start_recording(q_myo, q_myo_imu, q_manus, q_terminate, q_myo_ready)
+        # start_recording(q_myo, q_myo_imu, q_manus, q_terminate, q_myo_ready)
 
-        # Record for 5 seconds
-        while q_myo_ready.empty() and q_terminate.empty():
-            time.sleep(0.01)
+        # Wait for myo to be ready
+        # while q_myo_ready.empty() and q_terminate.empty():
+        #     time.sleep(0.01)
 
         # Colour background of the status bar to indicate that the recording is in progress
         self.root.status_bar.config(bg='#EA2027')
@@ -313,18 +312,30 @@ class GestureDetail(tk.Frame):
         self.progressbar.pack_configure(pady=(5, 0))
 
         # Start the recording
-        # RECORDING_LENGTH = 5
         RECORDING_LENGTH = 10
         WARMUP_LENGTH = 1
         # MYO_SR = 50
         MYO_SR = 200
 
+        q_netz_finished = multiprocessing.Queue()
+
+        # Open lambda new thread to check if Netz sent the recording finished signal
+        if self.gesture in XRMI_GESTURES:
+            p = multiprocessing.Process(target=netz_connector.listen_for_netz_finished_process, args=(q_netz_finished,))
+            p.start()
+
         def check_terminate():
             # Update progress bar
             self.progressbar['value'] = q_myo.qsize() / (MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH)) * 100
 
-            if q_myo.qsize() < MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH):
-                return
+            if self.gesture in XRMI_GESTURES:
+                # Check if Netz sent the recording finished signal
+                if q_netz_finished.empty():
+                    return
+
+            else:
+                if q_myo.qsize() < MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH):
+                    return
 
             # Stop timer
             repeating_timer.stop()
