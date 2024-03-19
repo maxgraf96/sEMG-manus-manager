@@ -47,3 +47,50 @@ GESTURES = [
 ]
 
 XRMI_GESTURES = GESTURES[-10:-1]
+
+header_emg = ",".join([f"emg_{i}" for i in range(8)])
+header_imu = [
+    "imu_quat_w",
+    "imu_quat_x",
+    "imu_quat_y",
+    "imu_quat_z",
+    "imu_acc_x",
+    "imu_acc_y",
+    "imu_acc_z",
+    "imu_gyro_x",
+    "imu_gyro_y",
+    "imu_gyro_z",
+]
+header_fingers = [
+    "thumb_spread",
+    "thumb_mcp",
+    "thumb_pip",
+    "thumb_dip",
+    "index_spread",
+    "index_mcp",
+    "index_pip",
+    "index_dip",
+    "middle_spread",
+    "middle_mcp",
+    "middle_pip",
+    "middle_dip",
+    "ring_spread",
+    "ring_mcp",
+    "ring_pip",
+    "ring_dip",
+    "pinky_spread",
+    "pinky_mcp",
+    "pinky_pip",
+    "pinky_dip",
+]
+header_hand_rotation = ["wrist_quat_x", "wrist_quat_y", "wrist_quat_z", "wrist_quat_w"]
+DATA_CSV_HEADER_STR = (
+    header_emg
+    + ","
+    + ",".join(header_imu)
+    + ","
+    + ",".join(header_fingers)
+    + ","
+    + ",".join(header_hand_rotation)
+)
+DATA_CSV_HEADER_LIST = DATA_CSV_HEADER_STR.split(",")

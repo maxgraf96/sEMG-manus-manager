@@ -17,9 +17,12 @@ def worker_manus(q, q_terminate):
         message = socket.recv()
 
         # Parse: The first 20 floats in a message are the finger data
+        # coming in as (thumb, index, middle, ring, pinky)
+        # and for each, (mcp_stretch, mcp_bend, pip_bend, dip_bend)
         finger_data = struct.unpack("20f", message[0:80])
 
         # The next 4 floats are the quaternion describing the wrist orientation
+        # coming in as (x, y, z, w)
         wrist_quat = struct.unpack("4f", message[80:96])
 
         # At position 20 we have the timestamp - q is a long long (8 bytes)

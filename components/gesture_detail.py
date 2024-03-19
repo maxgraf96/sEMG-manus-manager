@@ -16,7 +16,7 @@ import helpers
 from components.browser import BrowserFrame
 from components.emg_inspector import EMGInspectorWindow
 from config import FONT, VISUALISER_PATH
-from constants import XRMI_GESTURES
+from constants import XRMI_GESTURES, DATA_CSV_HEADER_STR
 from helpers import RepeatedTimer
 from networking import netz_connector
 from myo.data_collection import start_recording
@@ -405,9 +405,7 @@ class GestureDetail(tk.Frame):
                     return
             else:
                 # Normal, check if the recording time is up
-                # if q_myo.qsize() < MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH):
-                current_size = q_manus.qsize()
-                if q_manus.qsize() < 100:
+                if q_myo.qsize() < MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH):
                     return
 
             # Stop timer
@@ -479,9 +477,11 @@ class GestureDetail(tk.Frame):
                 )
                 # Create the recording file
                 recording_path = os.path.join(session_folder, recording_filename)
-                os.makedirs(session_folder, exist_ok=True)
+                os.makedirs(session_folder, exist_ok=True) 
+
+
                 np.savetxt(
-                    recording_path, np.array(recording, dtype=float), delimiter=","
+                    recording_path, np.array(recording, dtype=float), delimiter=",", header=DATA_CSV_HEADER_STR
                 )
                 # Display a confirmation message
                 msgbox.showinfo(
