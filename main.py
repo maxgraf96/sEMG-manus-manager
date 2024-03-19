@@ -1,6 +1,5 @@
 import os
 import ctypes
-import os
 import subprocess
 import tkinter as tk
 from tkinter import ttk
@@ -10,12 +9,22 @@ from cefpython3 import cefpython as cef
 
 from components.VerticallyScrolledFrame import VerticalScrolledFrame
 from components.analysis.analysis import AnalysisFrame
-from components.gesture_detail import p_visualiser, q_visualiser, on_browser_window_close, \
-    get_browser_open
+from components.gesture_detail import (
+    p_visualiser,
+    q_visualiser,
+    on_browser_window_close,
+    get_browser_open,
+)
 from inference.inference import InferenceFrame
 from components.session_detail import SessionDetail
 from components.sidebar import Sidebar
-from config import FONT, BG_COLOUR_LIGHT, FG_COLOUR_LIGHT, BG_COLOUR_DARK, FG_COLOUR_DARK
+from config import (
+    FONT,
+    BG_COLOUR_LIGHT,
+    FG_COLOUR_LIGHT,
+    BG_COLOUR_DARK,
+    FG_COLOUR_DARK,
+)
 from helpers import configure_recursively, get_total_number_of_datapoints
 
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -25,10 +34,12 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title('sEMG Manus Manager')
-        self.iconbitmap('resources/tap.ico')
+        self.title("sEMG Manus Manager")
+        self.iconbitmap("resources/tap.ico")
         self.geometry("1500x800")
-        self.configure(bg=BG_COLOUR_LIGHT)  # Set the background color of the main window
+        self.configure(
+            bg=BG_COLOUR_LIGHT
+        )  # Set the background color of the main window
         # Add state variable for theme
         self.theme_mode = "light"
         self.colour_config = {
@@ -38,6 +49,7 @@ class App(tk.Tk):
             "bc": "grey",
         }
 
+        self.wm_protocol("WM_DELETE_WINDOW:q")
         self.create_status_bar()
         self.create_widgets()
 
@@ -47,21 +59,22 @@ class App(tk.Tk):
     def create_widgets(self):
         # Configure style for the notebook tab
         style = ttk.Style()
-        style.configure('TNotebook.Tab', padding=[200, 2])
+        style.configure("TNotebook.Tab", padding=[200, 2])
         # Make frame background white
-        style.configure('TFrame', background=self.colour_config["bg"])
+        style.configure("TFrame", background=self.colour_config["bg"])
 
         # Create the notebook (tab container)
         self.notebook = ttk.Notebook(self)
+        # helpers.configure_recursively
         # Create two frames for the two tabs
         tab1_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
         tab2_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
         tab3_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
 
         # Add frames to notebook as individual tabs
-        self.notebook.add(tab1_frame, text='Data Collection')
-        self.notebook.add(tab2_frame, text='Inference')
-        self.notebook.add(tab3_frame, text='Analysis')
+        self.notebook.add(tab1_frame, text="Data Collection")
+        self.notebook.add(tab2_frame, text="Inference")
+        self.notebook.add(tab3_frame, text="Analysis")
 
         # DATA COLLECTION TAB
         self.sidebar = Sidebar(self, tab1_frame, self.load_user_data)
@@ -84,70 +97,116 @@ class App(tk.Tk):
         self.notebook.select(0)
 
     def update_total_datapoints(self):
-        self.datapoints.set(f"Total number of datapoints: {get_total_number_of_datapoints()}")
+        self.datapoints.set(
+            f"Total number of datapoints: {get_total_number_of_datapoints()}"
+        )
 
     def create_status_bar(self):
         self.status_bar_bg = "#009432"
-        self.status_bar = tk.Frame(self, height=36, bg=self.status_bar_bg)  # Create a frame for the status bar
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)  # Attach the status bar to the bottom
+
+        self.status_bar = tk.Frame(
+            self, height=36, bg=self.status_bar_bg
+        )  # Create a frame for the status bar
+        self.status_bar.pack(
+            side=tk.BOTTOM, fill=tk.X
+        )  # Attach the status bar to the bottom
         self.status_bar.pack_propagate(False)  # Prevent the status bar from resizing
 
         # Show cumulative number of datapoints
         # TKInter variable to update the label
         self.datapoints = tk.StringVar()
-        self.datapoints_label = tk.Label(self.status_bar, bg=self.status_bar_bg, textvariable=self.datapoints, fg='white', anchor='e')
+        self.datapoints_label = tk.Label(
+            self.status_bar,
+            bg=self.status_bar_bg,
+            textvariable=self.datapoints,
+            fg="white",
+            anchor="e",
+        )
         self.update_total_datapoints()
         self.datapoints_label.pack(side=tk.RIGHT, padx=10)
 
         # Light/dark theme toggle button
         # Load the ico file
         photo_image = ImageTk.PhotoImage(file="resources/day-and-night.ico")
+
         # Create the button and set the image
-        self.theme_toggle_button = tk.Button(self.status_bar, image=photo_image, name="theme_toggle_button",
-                                             command=self.toggle_theme, bg=self.status_bar_bg, borderwidth=0, width=24, height=24)
+        self.theme_toggle_button = tk.Button(
+            self.status_bar,
+            image=photo_image,
+            name="theme_toggle_button",
+            command=self.toggle_theme,
+            bg=self.status_bar_bg,
+            borderwidth=0,
+            width=24,
+            height=24,
+        )
         self.theme_toggle_button.image = photo_image
         self.theme_toggle_button.pack(side=tk.LEFT, padx=10)
 
     def load_user_data(self, user_id):
-        user_name = self.sidebar.get_user_name(f'u_{user_id}')
+        user_name = self.sidebar.get_user_name(f"u_{user_id}")
 
         # Clear the detail frame
         for widget in self.detail_frame.interior.winfo_children():
             widget.destroy()
 
-        tk.Label(self.detail_frame.interior, text=f"User {user_id} - {user_name}", font=(FONT, 20),
-                 bg=self.colour_config["bg"],
-                 fg=self.colour_config["fg"]).pack(pady=(10, 0))
+        tk.Label(
+            self.detail_frame.interior,
+            text=f"User {user_id} - {user_name}",
+            font=(FONT, 20),
+            bg=self.colour_config["bg"],
+            fg=self.colour_config["fg"],
+        ).pack(pady=(10, 0))
 
-        user_folder = os.path.join('user_data', f'u_{user_id}')
-        session_folders = [folder for folder in os.listdir(user_folder) if folder.startswith('s_')]
+        user_folder = os.path.join("user_data", f"u_{user_id}")
+        session_folders = [
+            folder for folder in os.listdir(user_folder) if folder.startswith("s_")
+        ]
 
-        for session_folder in sorted(session_folders, key=lambda x: int(x.split('_')[1])):
-            session_id = session_folder.split('_')[1]
-            session_detail = SessionDetail(self.detail_frame.interior, user_id, session_id, self)
+        for session_folder in sorted(
+            session_folders, key=lambda x: int(x.split("_")[1])
+        ):
+            session_id = session_folder.split("_")[1]
+            session_detail = SessionDetail(
+                self.detail_frame.interior, user_id, session_id, self
+            )
             session_detail.pack(fill=tk.BOTH, expand=True)
 
         # Add New Session button
-        new_session_button = tk.Button(self.detail_frame.interior, text="Add New Session",
-                                       command=lambda: self.create_new_session(user_id), bg=self.colour_config["bg"],
-                                       fg=self.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
+        new_session_button = tk.Button(
+            self.detail_frame.interior,
+            text="Add New Session",
+            command=lambda: self.create_new_session(user_id),
+            bg=self.colour_config["bg"],
+            fg=self.colour_config["fg"],
+            relief=tk.RIDGE,
+            borderwidth=1,
+        )
         new_session_button.pack(ipadx=20, pady=10)
 
     def create_new_session(self, user_id):
-        user_folder = os.path.join('user_data', f'u_{user_id}')
-        existing_sessions = [folder for folder in os.listdir(user_folder) if folder.startswith('s_')]
-        next_session_id = 1 if not existing_sessions else max(
-            [int(folder.split('_')[1]) for folder in existing_sessions]) + 1
+        user_folder = os.path.join("user_data", f"u_{user_id}")
+        existing_sessions = [
+            folder for folder in os.listdir(user_folder) if folder.startswith("s_")
+        ]
+        next_session_id = (
+            1
+            if not existing_sessions
+            else max([int(folder.split("_")[1]) for folder in existing_sessions]) + 1
+        )
 
-        new_session_folder = os.path.join(user_folder, f's_{next_session_id}')
+        new_session_folder = os.path.join(user_folder, f"s_{next_session_id}")
         os.makedirs(new_session_folder, exist_ok=True)
 
         # Refresh the user data view to include the new session
         self.load_user_data(user_id)
 
     def create_new_session_button(self, user_folder):
-        new_session_button = tk.Button(self.detail_frame, text="Create New Session",
-                                       command=lambda: self.create_new_session(user_folder))
+        new_session_button = tk.Button(
+            self.detail_frame,
+            text="Create New Session",
+            command=lambda: self.create_new_session(user_folder),
+        )
         new_session_button.pack(pady=20)
 
     def switch_to_inference_from_file(self, file_path):
@@ -168,7 +227,6 @@ class App(tk.Tk):
             self.colour_config = {
                 "bg": BG_COLOUR_LIGHT,
                 "fg": FG_COLOUR_LIGHT,
-
             }
 
         bg = self.colour_config["bg"]
@@ -178,7 +236,7 @@ class App(tk.Tk):
 
         self.detail_frame.canvas.configure(bg=bg)
         self.status_bar.configure(bg=self.status_bar_bg)
-        self.datapoints_label.configure(bg='grey', fg='black')
+        self.datapoints_label.configure(bg="grey", fg="black")
 
     def on_close(self):
         if get_browser_open():
@@ -193,13 +251,18 @@ class App(tk.Tk):
         self.destroy()
 
 
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Start the MANUS SDKClient
     manus_process = subprocess.Popen(
-        ["start", "/min", "C:\\Users\\Max\\Desktop\\MANUS_SDKClient\\Output\\Release\\x64\\SDKClient.exe"],
-        shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        [
+            "start",
+            "/min",
+            "C:\\Users\\Max\\Desktop\\MANUS_SDKClient\\Output\\Release\\x64\\SDKClient.exe",
+        ],
+        shell=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
 
     app = App()

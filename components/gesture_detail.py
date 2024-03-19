@@ -19,6 +19,7 @@ from config import FONT, VISUALISER_PATH
 from constants import XRMI_GESTURES
 from helpers import RepeatedTimer
 from networking import netz_connector
+from myo.data_collection import start_recording
 
 # Visualiser setup -> that's the Three.js app
 # Queue for interacting with the visualiser
@@ -45,19 +46,21 @@ q_manus = multiprocessing.Queue()
 
 unity_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 unity_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-interfaces = socket.getaddrinfo(host=socket.gethostname(), port=None, family=socket.AF_INET)
+interfaces = socket.getaddrinfo(
+    host=socket.gethostname(), port=None, family=socket.AF_INET
+)
 allips = [ip[-1][0] for ip in interfaces]
 # allips.append("127.0.0.1")
 
 
-
 def visualiser_process(q_visualiser):
     # Run the visualiser: the command is 'npm run dev' and the working directory is the visualiser path
-    proc = subprocess.Popen(['npm', 'run', 'dev'],
-                            cwd=VISUALISER_PATH,
-                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
-                            shell=True,
-                            )
+    proc = subprocess.Popen(
+        ["npm", "run", "dev"],
+        cwd=VISUALISER_PATH,
+        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+        shell=True,
+    )
 
     # Wait for the visualiser to be ready
     while q_visualiser.empty():
@@ -85,8 +88,8 @@ def open_browser_window(url):
     browser_window.grid_rowconfigure(0, weight=1)
 
     # Create Frame
-    frame = tk.Frame(browser_window, bg='black')
-    frame.grid(row=0, column=0, sticky=('NSWE'))
+    frame = tk.Frame(browser_window, bg="black")
+    frame.grid(row=0, column=0, sticky=("NSWE"))
 
     # Create Browser Frame
     browser_frame = BrowserFrame(frame)
@@ -109,8 +112,9 @@ def show_visualisation():
     # Check if the visualiser process is already running
     if p_visualiser is None:
         print("No visualiser process running, starting a new one.")
-        p_visualiser = multiprocessing.Process(target=visualiser_process,
-                                               args=(q_visualiser,))
+        p_visualiser = multiprocessing.Process(
+            target=visualiser_process, args=(q_visualiser,)
+        )
         p_visualiser.start()
 
     if not is_browser_open:
@@ -140,10 +144,18 @@ class GestureDetail(tk.Frame):
 
         # Create a context menu
         self.context_menu = tk.Menu(root, tearoff=0)
-        self.context_menu.add_command(label="Show in Explorer", command=self.show_in_explorer)
-        self.context_menu.add_command(label="Show 3D Visualisation", command=self.show_visualisation)
-        self.context_menu.add_command(label="Run Inference on File", command=self.run_inference_on_file)
-        self.context_menu.add_command(label="Open Inspector", command=self.open_inspector)
+        self.context_menu.add_command(
+            label="Show in Explorer", command=self.show_in_explorer
+        )
+        self.context_menu.add_command(
+            label="Show 3D Visualisation", command=self.show_visualisation
+        )
+        self.context_menu.add_command(
+            label="Run Inference on File", command=self.run_inference_on_file
+        )
+        self.context_menu.add_command(
+            label="Open Inspector", command=self.open_inspector
+        )
 
     def on_right_click(self, event):
         # Get the index of the item under the cursor
@@ -162,54 +174,88 @@ class GestureDetail(tk.Frame):
         # Get the normalised path
         normalized_path = self.get_normalised_path()
         # Open the file location in Windows Explorer
-        subprocess.run(['explorer', '/select,', normalized_path])
+        subprocess.run(["explorer", "/select,", normalized_path])
 
     def create_widgets(self):
-        tk.Label(self, text=f"Gesture {self.gesture}", font=(FONT, 14), bg=self.root.colour_config["bg"],
-                 fg=self.root.colour_config["fg"]).pack()
+        tk.Label(
+            self,
+            text=f"Gesture {self.gesture}",
+            font=(FONT, 14),
+            bg=self.root.colour_config["bg"],
+            fg=self.root.colour_config["fg"],
+        ).pack()
 
-        self.recordings_listbox = tk.Listbox(self, height=7,
-                                             fg=self.root.colour_config["fg"],
-                                             bg=self.root.colour_config["bg"],
-                                             selectbackground='grey',
-                                             selectforeground='white',
-                                             highlightthickness=0, highlightbackground='grey',
-                                             relief=tk.RIDGE, borderwidth=1)
+        self.recordings_listbox = tk.Listbox(
+            self,
+            height=7,
+            fg=self.root.colour_config["fg"],
+            bg=self.root.colour_config["bg"],
+            selectbackground="grey",
+            selectforeground="white",
+            highlightthickness=0,
+            highlightbackground="grey",
+            relief=tk.RIDGE,
+            borderwidth=1,
+        )
         self.recordings_listbox.pack(fill=tk.BOTH)
         self.recordings_listbox.bind("<Delete>", self.delete_recording_listbox)
         self.recordings_listbox.bind("<Button-3>", self.on_right_click)
 
         # On left click, open the selected recording
-        self.recordings_listbox.bind("<Button-1>", lambda event: self.open_inspector_if_open())
+        self.recordings_listbox.bind(
+            "<Button-1>", lambda event: self.open_inspector_if_open()
+        )
 
         # Load sessions for this gesture
         self.load_recordings()
 
-        self.slow_recording_button = tk.Button(self, text="Record Slow",
-                                               command=lambda: self.start_new_recording('slow'),
-                                               bg="#95a5a6", fg=self.root.colour_config["fg"],
-                                               relief=tk.RIDGE, borderwidth=1)
+        self.slow_recording_button = tk.Button(
+            self,
+            text="Record Slow",
+            command=lambda: self.start_new_recording("slow"),
+            bg="#95a5a6",
+            fg=self.root.colour_config["fg"],
+            relief=tk.RIDGE,
+            borderwidth=1,
+        )
         # New session button should be 200px wide and left-aligned
         self.slow_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
-        self.medium_recording_button = tk.Button(self, text="Record Medium",
-                                                 command=lambda: self.start_new_recording('medium'),
-                                                 bg="#bdc3c7", fg=self.root.colour_config["fg"],
-                                                 relief=tk.RIDGE, borderwidth=1)
+        self.medium_recording_button = tk.Button(
+            self,
+            text="Record Medium",
+            command=lambda: self.start_new_recording("medium"),
+            bg="#bdc3c7",
+            fg=self.root.colour_config["fg"],
+            relief=tk.RIDGE,
+            borderwidth=1,
+        )
         self.medium_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
 
-        self.fast_recording_button = tk.Button(self, text="Record Fast",
-                                               command=lambda: self.start_new_recording('fast'),
-                                               bg="#ecf0f1", fg=self.root.colour_config["fg"],
-                                               relief=tk.RIDGE, borderwidth=1)
+        self.fast_recording_button = tk.Button(
+            self,
+            text="Record Fast",
+            command=lambda: self.start_new_recording("fast"),
+            bg="#ecf0f1",
+            fg=self.root.colour_config["fg"],
+            relief=tk.RIDGE,
+            borderwidth=1,
+        )
         self.fast_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
 
-        self.progressbar = ttk.Progressbar(self, orient=tk.HORIZONTAL, length=200, mode='determinate')
+        self.progressbar = ttk.Progressbar(
+            self, orient=tk.HORIZONTAL, length=200, mode="determinate"
+        )
         # Hide the progress bar
         self.progressbar.pack_forget()
 
     def load_recordings(self):
         # Get the session folder path
-        gesture_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
+        gesture_folder = os.path.join(
+            "user_data",
+            f"u_{self.user_id}",
+            f"s_{self.session_id}",
+            f"g_{self.gesture}",
+        )
 
         # Clear the existing recordings listbox
         self.recordings_listbox.delete(0, tk.END)
@@ -219,13 +265,16 @@ class GestureDetail(tk.Frame):
             return
 
         # Find all CSV files in the session folder
-        recording_files = [f for f in os.listdir(gesture_folder) if
-                           os.path.isfile(os.path.join(gesture_folder, f)) and f.endswith('.csv')]
+        recording_files = [
+            f
+            for f in os.listdir(gesture_folder)
+            if os.path.isfile(os.path.join(gesture_folder, f)) and f.endswith(".csv")
+        ]
 
         # For each recording file, extract information and add it to the listbox
         for recording_file in recording_files:
             # Extract the filename
-            filename = recording_file.split('.csv')[0]
+            filename = recording_file.split(".csv")[0]
 
             # Add the recording information to the listbox
             # You can modify this to display additional information from the CSV file
@@ -234,13 +283,23 @@ class GestureDetail(tk.Frame):
         # Bind double-click event to open the selected recording
         self.recordings_listbox.bind(
             # "<Double-Button-1>", lambda event: self.show_visualisation()
-            "<Double-Button-1>", lambda event: self.open_selected_recording()
+            "<Double-Button-1>",
+            lambda event: self.open_selected_recording(),
         )
 
     def show_visualisation(self):
-        filename = self.recordings_listbox.get(self.recordings_listbox.curselection()[0]) + '.csv'
+        filename = (
+            self.recordings_listbox.get(self.recordings_listbox.curselection()[0])
+            + ".csv"
+        )
         # Get full absolute path
-        filename = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}', filename)
+        filename = os.path.join(
+            "user_data",
+            f"u_{self.user_id}",
+            f"s_{self.session_id}",
+            f"g_{self.gesture}",
+            filename,
+        )
 
         # Extract hand pose data from the selected recording - this must be in the same format as the inference results.
         data = helpers.extract_hand_pose_data_from_gt_csv(filename)
@@ -262,21 +321,28 @@ class GestureDetail(tk.Frame):
         if not selected_index:
             return
         # Get the session folder path
-        session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
+        session_folder = os.path.join(
+            "user_data",
+            f"u_{self.user_id}",
+            f"s_{self.session_id}",
+            f"g_{self.gesture}",
+        )
         # Get the selected filename
-        selected_filename = self.recordings_listbox.get(selected_index[0]) + '.csv'
+        selected_filename = self.recordings_listbox.get(selected_index[0]) + ".csv"
         # Open the selected recording file
         os.startfile(os.path.join(session_folder, selected_filename))
 
-    def start_new_recording(self, speed: str = 'medium'):
+    def start_new_recording(self, speed: str = "medium"):
         # If we're doing XRMI gestures we need to notify Netz
         if self.gesture in XRMI_GESTURES:
             # Message content is the name of the gesture (self.gesture)
-            message = self.gesture.encode('utf-8')
+            message = self.gesture.encode("utf-8")
 
             for ip in allips:
-                print(f'sending on {ip}')
-                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)  # UDP
+                print(f"sending on {ip}")
+                sock = socket.socket(
+                    socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP
+                )  # UDP
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
                 sock.bind((ip, 0))
                 sock.sendto(message, ("255.255.255.255", 11000))
@@ -298,17 +364,17 @@ class GestureDetail(tk.Frame):
 
         # TODO reactivate those
         # Start a new recording
-        # start_recording(q_myo, q_myo_imu, q_manus, q_terminate, q_myo_ready)
+        start_recording(q_myo, q_myo_imu, q_manus, q_terminate, q_myo_ready)
 
         # Wait for myo to be ready
         # while q_myo_ready.empty() and q_terminate.empty():
         #     time.sleep(0.01)
 
         # Colour background of the status bar to indicate that the recording is in progress
-        self.root.status_bar.config(bg='#EA2027')
+        self.root.status_bar.config(bg="#EA2027")
 
         # Show progress bar
-        self.progressbar['value'] = 0
+        self.progressbar["value"] = 0
         self.progressbar.pack_configure(pady=(5, 0))
 
         # Start the recording
@@ -321,20 +387,27 @@ class GestureDetail(tk.Frame):
 
         # Open lambda new thread to check if Netz sent the recording finished signal
         if self.gesture in XRMI_GESTURES:
-            p = multiprocessing.Process(target=netz_connector.listen_for_netz_finished_process, args=(q_netz_finished,))
+            p = multiprocessing.Process(
+                target=netz_connector.listen_for_netz_finished_process,
+                args=(q_netz_finished,),
+            )
             p.start()
 
         def check_terminate():
             # Update progress bar
-            self.progressbar['value'] = q_myo.qsize() / (MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH)) * 100
+            self.progressbar["value"] = (
+                q_myo.qsize() / (MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH)) * 100
+            )
 
             if self.gesture in XRMI_GESTURES:
                 # Check if Netz sent the recording finished signal
                 if q_netz_finished.empty():
                     return
-
             else:
-                if q_myo.qsize() < MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH):
+                # Normal, check if the recording time is up
+                # if q_myo.qsize() < MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH):
+                current_size = q_manus.qsize()
+                if q_manus.qsize() < 100:
                     return
 
             # Stop timer
@@ -381,7 +454,9 @@ class GestureDetail(tk.Frame):
             # Ditch the first 1s of data points (warmup)
             recording = recording[MYO_SR:]
 
-            print(f"Matched {len(recording)} EMG data points with {len(manus_data)} hand pose samples.")
+            print(
+                f"Matched {len(recording)} EMG data points with {len(manus_data)} hand pose samples."
+            )
             avg_time_diff_imu = float("{:.2f}".format(np.mean(time_diffs_myo_imu)))
             avg_time_diff_manus = float("{:.2f}".format(np.mean(time_diffs_myo_manus)))
             print(f"Average time difference myo-imu: {avg_time_diff_imu} ms")
@@ -396,14 +471,22 @@ class GestureDetail(tk.Frame):
                 now = datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
                 recording_filename = f"recording_{speed}_{now}.csv"
                 # Get the session folder path
-                session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}',
-                                              f'g_{self.gesture}')
+                session_folder = os.path.join(
+                    "user_data",
+                    f"u_{self.user_id}",
+                    f"s_{self.session_id}",
+                    f"g_{self.gesture}",
+                )
                 # Create the recording file
                 recording_path = os.path.join(session_folder, recording_filename)
                 os.makedirs(session_folder, exist_ok=True)
-                np.savetxt(recording_path, np.array(recording, dtype=float), delimiter=",")
+                np.savetxt(
+                    recording_path, np.array(recording, dtype=float), delimiter=","
+                )
                 # Display a confirmation message
-                msgbox.showinfo("Recording Finished", f"Recording saved as {recording_filename}")
+                msgbox.showinfo(
+                    "Recording Finished", f"Recording saved as {recording_filename}"
+                )
             else:
                 # Retrieve error string from q_terminate (2nd element in the queue)
                 error = q_terminate.get()
@@ -427,9 +510,14 @@ class GestureDetail(tk.Frame):
         if not selected_index:
             return None
         # Get the session folder path
-        session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}', f'g_{self.gesture}')
+        session_folder = os.path.join(
+            "user_data",
+            f"u_{self.user_id}",
+            f"s_{self.session_id}",
+            f"g_{self.gesture}",
+        )
         # Get the selected filename
-        selected_filename = self.recordings_listbox.get(selected_index[0]) + '.csv'
+        selected_filename = self.recordings_listbox.get(selected_index[0]) + ".csv"
         # Create full path
         selected_filename = os.path.join(session_folder, selected_filename)
         # Normalize the file path
@@ -440,13 +528,19 @@ class GestureDetail(tk.Frame):
         # Get selected item index
         selected_index = self.recordings_listbox.curselection()
         if selected_index:
-            selected_filename = self.recordings_listbox.get(selected_index[0]) + '.csv'
+            selected_filename = self.recordings_listbox.get(selected_index[0]) + ".csv"
             # Ask for confirmation
-            if msgbox.askyesno("Delete recording for gesture",
-                               f"Are you sure you want to delete recording {selected_filename}?"):
+            if msgbox.askyesno(
+                "Delete recording for gesture",
+                f"Are you sure you want to delete recording {selected_filename}?",
+            ):
                 # Delete the csv file
-                session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}',
-                                              f'g_{self.gesture}')
+                session_folder = os.path.join(
+                    "user_data",
+                    f"u_{self.user_id}",
+                    f"s_{self.session_id}",
+                    f"g_{self.gesture}",
+                )
                 send2trash.send2trash(os.path.join(session_folder, selected_filename))
                 # os.remove(os.path.join(session_folder, selected_filename))
 
@@ -471,7 +565,9 @@ class GestureDetail(tk.Frame):
         if emg_inspector_window is None:
             emg_inspector_window = EMGInspectorWindow(normalized_path, self.root)
             # Add on close lambda to reset the window
-            emg_inspector_window.protocol("WM_DELETE_WINDOW", lambda: self.on_inspector_window_close())
+            emg_inspector_window.protocol(
+                "WM_DELETE_WINDOW", lambda: self.on_inspector_window_close()
+            )
         else:
             emg_inspector_window.load_file(normalized_path)
 
@@ -485,7 +581,6 @@ class GestureDetail(tk.Frame):
         global emg_inspector_window
         if emg_inspector_window is not None:
             self.open_inspector()
-
 
 
 def on_browser_window_close():
