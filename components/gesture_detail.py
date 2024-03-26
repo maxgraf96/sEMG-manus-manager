@@ -206,6 +206,8 @@ class GestureDetail(tk.Frame):
             "<Button-1>", lambda event: self.open_inspector_if_open()
         )
 
+        self.user_cancelled = False
+
         # Load sessions for this gesture
         self.load_recordings()
 
@@ -241,6 +243,18 @@ class GestureDetail(tk.Frame):
             borderwidth=1,
         )
         self.fast_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
+        self.stop_recording_button = tk.Button(
+            self,
+            text="Stop Recording",
+            command=self.stop_recording,
+            bg="#e74c3c",
+            fg=self.root.colour_config["fg"],
+            relief=tk.RIDGE,
+            borderwidth=1,
+        )
+        self.stop_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
+        # Hide button by default
+        self.stop_recording_button.pack_forget()
 
         self.progressbar = ttk.Progressbar(
             self, orient=tk.HORIZONTAL, length=200, mode="determinate"
@@ -333,6 +347,10 @@ class GestureDetail(tk.Frame):
         os.startfile(os.path.join(session_folder, selected_filename))
 
     def start_new_recording(self, speed: str = "medium"):
+        # Show stop recording button
+        self.stop_recording_button.pack_configure(side=LEFT, ipadx=30, pady=(5, 0))
+        self.user_cancelled = False
+
         # If we're doing XRMI gestures we need to notify Netz
         if self.gesture in XRMI_GESTURES:
             # Message content is the name of the gesture (self.gesture)
@@ -352,7 +370,7 @@ class GestureDetail(tk.Frame):
             time.sleep(1)
 
         # Helper q to terminate the recording
-        q_terminate = multiprocessing.Queue()
+        self.q_terminate = multiprocessing.Queue()
         # Helper q to check if the myo is ready
         # Only when the myo is ready, the recording will start
         q_myo_ready = multiprocessing.Queue()
@@ -364,11 +382,11 @@ class GestureDetail(tk.Frame):
 
         # TODO reactivate those
         # Start a new recording
-        start_recording(q_myo, q_myo_imu, q_manus, q_terminate, q_myo_ready)
+        start_recording(q_myo, q_myo_imu, q_manus, self.q_terminate, q_myo_ready)
 
         # Wait for myo to be ready
-        # while q_myo_ready.empty() and q_terminate.empty():
-        #     time.sleep(0.01)
+        while q_myo_ready.empty() and self.q_terminate.empty():
+            time.sleep(0.01)
 
         # Colour background of the status bar to indicate that the recording is in progress
         self.root.status_bar.config(bg="#EA2027")
@@ -393,26 +411,31 @@ class GestureDetail(tk.Frame):
             )
             p.start()
 
-        def check_terminate():
-            # Update progress bar
-            self.progressbar["value"] = (
-                q_myo.qsize() / (MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH)) * 100
-            )
+        if self.gesture == "melody":
+            # Longer recording for melody
+            RECORDING_LENGTH = 20
 
-            if self.gesture in XRMI_GESTURES:
-                # Check if Netz sent the recording finished signal
-                if q_netz_finished.empty():
-                    return
-            else:
-                # Normal, check if the recording time is up
-                if q_myo.qsize() < MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH):
-                    return
+        def check_terminate():
+            if not self.user_cancelled:
+                # Update progress bar
+                self.progressbar["value"] = (
+                    q_myo.qsize() / (MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH)) * 100
+                )
+
+                if self.gesture in XRMI_GESTURES:
+                    # Check if Netz sent the recording finished signal
+                    if q_netz_finished.empty():
+                        return
+                else:
+                    # Normal, check if the recording time is up
+                    if q_myo.qsize() < MYO_SR * (WARMUP_LENGTH + RECORDING_LENGTH):
+                        return
 
             # Stop timer
             repeating_timer.stop()
 
             # Terminate the recording
-            q_terminate.put(True)
+            self.q_terminate.put(True)
 
             # Get data from our queues
             emg_data = []
@@ -464,7 +487,7 @@ class GestureDetail(tk.Frame):
             self.root.status_bar.config(bg=self.root.status_bar_bg)
 
             # Save recording if it's not empty
-            if recording:
+            if recording and not self.user_cancelled:
                 # Generate a unique filename for the recording
                 now = datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
                 recording_filename = f"recording_{speed}_{now}.csv"
@@ -477,21 +500,27 @@ class GestureDetail(tk.Frame):
                 )
                 # Create the recording file
                 recording_path = os.path.join(session_folder, recording_filename)
-                os.makedirs(session_folder, exist_ok=True) 
-
+                os.makedirs(session_folder, exist_ok=True)
 
                 np.savetxt(
-                    recording_path, np.array(recording, dtype=float), delimiter=",", header=DATA_CSV_HEADER_STR
+                    recording_path,
+                    np.array(recording, dtype=float),
+                    delimiter=",",
+                    header=DATA_CSV_HEADER_STR,
                 )
                 # Display a confirmation message
                 msgbox.showinfo(
                     "Recording Finished", f"Recording saved as {recording_filename}"
                 )
             else:
-                # Retrieve error string from q_terminate (2nd element in the queue)
-                error = q_terminate.get()
-                # Recording empty -> display error dialog box
-                msgbox.showerror("Recording Error", error)
+                if self.user_cancelled:
+                    # User cancelled the recording -> display a message
+                    msgbox.showinfo("Recording Cancelled", "Recording was cancelled.")
+                else:
+                    # Retrieve error string from q_terminate (2nd element in the queue)
+                    error = self.q_terminate.get()
+                    # Recording empty -> display error dialog box
+                    msgbox.showerror("Recording Error", error)
 
             # Hide progress bar
             self.progressbar.pack_forget()
@@ -499,9 +528,17 @@ class GestureDetail(tk.Frame):
             self.load_recordings()
             # Update total number of datapoints
             self.root.update_total_datapoints()
+            # Hide the stop recording button
+            self.stop_recording_button.pack_forget()
+            self.user_cancelled = False
 
         # Start a repeating timer to check if the recording is finished
         repeating_timer = RepeatedTimer(0.1, check_terminate)
+
+    def stop_recording(self):
+        # Terminate the recording
+        self.q_terminate.put(True)
+        self.user_cancelled = True
 
     def get_normalised_path(self):
         # Get the selected recording index

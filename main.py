@@ -103,7 +103,6 @@ class App(tk.Tk):
 
     def create_status_bar(self):
         self.status_bar_bg = "#009432"
-
         self.status_bar = tk.Frame(
             self, height=36, bg=self.status_bar_bg
         )  # Create a frame for the status bar
