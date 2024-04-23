@@ -44,7 +44,7 @@ def configure_recursively(widget, config):
 
 def get_total_number_of_datapoints():
     # Get the total number of datapoints
-    total_datapoints = 0
+    total_no_files = 0
     for user_folder in os.listdir("user_data"):
         user_folder_path = os.path.join("user_data", user_folder)
         for session_folder in os.listdir(user_folder_path):
@@ -57,11 +57,8 @@ def get_total_number_of_datapoints():
                     continue
                 for file in os.listdir(gesture_folder_path):
                     if file.endswith(".csv"):
-                        file_path = os.path.join(gesture_folder_path, file)
-                        with open(file_path, "r") as f:
-                            lines = f.readlines()
-                            total_datapoints += len(lines)
-    return total_datapoints
+                        total_no_files += 1
+    return total_no_files * 2000
 
 
 class RepeatedTimer(object):

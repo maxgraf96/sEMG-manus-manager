@@ -78,6 +78,9 @@ class InferenceFromFile(tk.Frame):
             send_data = {"from_file": True, "data": []}
             for line in file:
                 line_data = line.strip().split(',')
+                # Skip header line
+                if "emg" in line_data[0]:
+                    continue
                 # Parse first FEATURE_VECTOR_DIM values as EMG data
                 emg_data = [int(float(x)) for x in line_data[:FEATURE_VECTOR_DIM]]
                 send_data["data"].append(emg_data)

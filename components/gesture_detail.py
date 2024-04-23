@@ -380,7 +380,6 @@ class GestureDetail(tk.Frame):
         q_myo_imu.empty()
         q_manus.empty()
 
-        # TODO reactivate those
         # Start a new recording
         start_recording(q_myo, q_myo_imu, q_manus, self.q_terminate, q_myo_ready)
 
