@@ -5,7 +5,7 @@ NUM_FEATURES_PER_SAMPLE = 18
 NUM_LABELS_PER_SAMPLE = 20
 
 # For MANUS data, label indices out of all 20 collected values, expressed in indices AFTER separation from samples
-MANUS_LABEL_INDICES = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+MANUS_LABEL_INDICES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 
 MODEL_OUTPUT_DIM = len(MANUS_LABEL_INDICES)
 

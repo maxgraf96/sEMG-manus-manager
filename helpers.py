@@ -181,22 +181,26 @@ def create_visualiser_csv(data):
         for i in range(data.shape[1]):
             current_row = list(data[0][i])
 
-            index_spread = current_row[0]
-            index_mcp = current_row[1]
-            index_pip = current_row[2]
-            index_dip = current_row[3]
-            middle_spread = current_row[4]
-            middle_mcp = current_row[5]
-            middle_pip = current_row[6]
-            middle_dip = current_row[7]
-            ring_spread = current_row[8]
-            ring_mcp = current_row[9]
-            ring_pip = current_row[10]
-            ring_dip = current_row[11]
-            pinky_spread = current_row[12]
-            pinky_mcp = current_row[13]
-            pinky_pip = current_row[14]
-            pinky_dip = current_row[15]
+            thumb_spread = current_row[0]
+            thumb_mcp = current_row[1]
+            thumb_pip = current_row[2]
+            thumb_dip = current_row[3]
+            index_spread = current_row[4]
+            index_mcp = current_row[5]
+            index_pip = current_row[6]
+            index_dip = current_row[7]
+            middle_spread = current_row[8]
+            middle_mcp = current_row[9]
+            middle_pip = current_row[10]
+            middle_dip = current_row[11]
+            ring_spread = current_row[12]
+            ring_mcp = current_row[13]
+            ring_pip = current_row[14]
+            ring_dip = current_row[15]
+            pinky_spread = current_row[16]
+            pinky_mcp = current_row[17]
+            pinky_pip = current_row[18]
+            pinky_dip = current_row[19]
 
             writer.writerow(
                 [
@@ -207,18 +211,18 @@ def create_visualiser_csv(data):
                     "0",
                     # Thumb_CMC_X, Thumb_CMC_Y, Thumb_CMC_Z
                     "0",
-                    "0",
+                    thumb_spread,
                     "0",
                     # Thumb_MCP_X, Thumb_MCP_Y, Thumb_MCP_Z
-                    "0",
+                    thumb_mcp,
                     "0",
                     "0",
                     # Thumb_DIP_X, Thumb_DIP_Y, Thumb_DIP_Z
-                    "0",
+                    thumb_dip,
                     "0",
                     "0",
                     # Thumb_TIP_X, Thumb_TIP_Y, Thumb_TIP_Z
-                    "0",
+                    thumb_pip,
                     "0",
                     "0",
                     # Index_CMC_X, Index_CMC_Y, Index_CMC_Z

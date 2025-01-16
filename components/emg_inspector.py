@@ -143,7 +143,7 @@ class EMGInspector(tk.Frame):
         ax2.set_title(f"Spectrogram - Channel {self.channel_var.get() + 1}")
         ax2.set_xlabel("Time (s)")
         ax2.set_ylabel("Frequency (Hz)")
-        self.fig.colorbar(im, ax=ax2, orientation="vertical", label="Intensity dB")
+        self.fig.colorbar(im, ax=ax2, orientation="vertical", label="Intensity")
 
         # Peak frequency
         ax3 = self.fig.add_subplot(2, 2, 3)

@@ -12,7 +12,10 @@ import helpers
 from components import gesture_detail
 from config import FONT
 from constants import FEATURE_VECTOR_DIM
-from inference.worker_inference import worker_myo_receiver, worker_inference_res_to_visualiser
+from inference.worker_inference import (
+    worker_myo_receiver,
+    worker_inference_res_to_visualiser,
+)
 from myo.worker_myo import worker_myo
 from components.gesture_detail import show_visualisation
 
@@ -30,8 +33,11 @@ class InferenceFromFile(tk.Frame):
         self.pack_configure(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
     def browse(self):
-        f_path = askopenfilename(initialdir="./user_data",
-                                 title="Select File", filetypes=(("CSV Files", "*.csv*"), ("All Files", "*.*")))
+        f_path = askopenfilename(
+            initialdir="./user_data",
+            title="Select File",
+            filetypes=(("CSV Files", "*.csv*"), ("All Files", "*.*")),
+        )
 
         self.load_file(f_path)
 
@@ -50,21 +56,42 @@ class InferenceFromFile(tk.Frame):
     def create_widgets(self):
         top_frame = tk.Frame(self, bg=self.root.colour_config["bg"])
         top_frame.pack_configure(fill=tk.X, pady=10)
-        tk.Label(top_frame, text="From File", font=(FONT, 16), bg=self.root.colour_config["bg"],
-                 fg=self.root.colour_config["fg"]).pack()
+        tk.Label(
+            top_frame,
+            text="From File",
+            font=(FONT, 16),
+            bg=self.root.colour_config["bg"],
+            fg=self.root.colour_config["fg"],
+        ).pack()
 
-        self.browse_button = tk.Button(self, text="Select File", bg=self.root.colour_config["bg"],
-                                       fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1,
-                                       command=self.browse)
+        self.browse_button = tk.Button(
+            self,
+            text="Select File",
+            bg=self.root.colour_config["bg"],
+            fg=self.root.colour_config["fg"],
+            relief=tk.RIDGE,
+            borderwidth=1,
+            command=self.browse,
+        )
         self.browse_button.pack_configure(pady=10, ipady=5)
 
-        self.file_label = tk.Label(self, text="File: ", bg=self.root.colour_config["bg"],
-                                   fg=self.root.colour_config["fg"])
+        self.file_label = tk.Label(
+            self,
+            text="File: ",
+            bg=self.root.colour_config["bg"],
+            fg=self.root.colour_config["fg"],
+        )
         self.file_label.pack_configure(pady=10, ipady=5, fill=tk.X)
 
-        self.inference_button = tk.Button(self, text="Run Inference", command=self.run_inference_on_file,
-                                          bg=self.root.colour_config["bg"],
-                                          fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
+        self.inference_button = tk.Button(
+            self,
+            text="Run Inference",
+            command=self.run_inference_on_file,
+            bg=self.root.colour_config["bg"],
+            fg=self.root.colour_config["fg"],
+            relief=tk.RIDGE,
+            borderwidth=1,
+        )
         self.inference_button.pack_configure(pady=20, ipady=5)
 
         self.browse_button.config(width=40)
@@ -74,10 +101,10 @@ class InferenceFromFile(tk.Frame):
         print("Running inference on file " + self.file_label.cget("text"))
 
         # Open file and send data to the server
-        with open(filepath, 'r') as file:
+        with open(filepath, "r") as file:
             send_data = {"from_file": True, "data": []}
             for line in file:
-                line_data = line.strip().split(',')
+                line_data = line.strip().split(",")
                 # Skip header line
                 if "emg" in line_data[0]:
                     continue
@@ -85,7 +112,7 @@ class InferenceFromFile(tk.Frame):
                 emg_data = [int(float(x)) for x in line_data[:FEATURE_VECTOR_DIM]]
                 send_data["data"].append(emg_data)
 
-            js = json.dumps(send_data).encode('utf-8')
+            js = json.dumps(send_data).encode("utf-8")
             self.inference_frame.pub_socket.send(js)
 
             # Wait for the result
@@ -133,21 +160,37 @@ class InferenceFromLive(tk.Frame):
     def create_widgets(self):
         top_frame = tk.Frame(self, bg=self.root.colour_config["bg"])
         top_frame.pack_configure(fill=tk.X, pady=10)
-        tk.Label(top_frame, text="From Live Data", font=(FONT, 16), bg=self.root.colour_config["bg"],
-                 fg=self.root.colour_config["fg"]).pack()
+        tk.Label(
+            top_frame,
+            text="From Live Data",
+            font=(FONT, 16),
+            bg=self.root.colour_config["bg"],
+            fg=self.root.colour_config["fg"],
+        ).pack()
 
-        self.inference_button = tk.Button(self, text="Run Live Inference", command=self.infer,
-                                          bg=self.root.colour_config["bg"],
-                                          fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
+        self.inference_button = tk.Button(
+            self,
+            text="Run Live Inference",
+            command=self.infer,
+            bg=self.root.colour_config["bg"],
+            fg=self.root.colour_config["fg"],
+            relief=tk.RIDGE,
+            borderwidth=1,
+        )
         self.inference_button.pack_configure(pady=10, ipady=5, anchor=tk.CENTER)
-        self.stop_inference_button = tk.Button(self, text="Stop Live Inference", command=self.stop_inference,
-                                                  bg=self.root.colour_config["bg"],
-                                                  fg=self.root.colour_config["fg"], relief=tk.RIDGE, borderwidth=1)
+        self.stop_inference_button = tk.Button(
+            self,
+            text="Stop Live Inference",
+            command=self.stop_inference,
+            bg=self.root.colour_config["bg"],
+            fg=self.root.colour_config["fg"],
+            relief=tk.RIDGE,
+            borderwidth=1,
+        )
         self.stop_inference_button.pack_configure(pady=10, ipady=5)
 
         self.inference_button.config(width=40)
         self.stop_inference_button.config(width=40)
-
 
     def check_terminate_live_inference(self):
         if self.should_terminate_live_inference:
@@ -168,24 +211,40 @@ class InferenceFromLive(tk.Frame):
         self.q_myo_ready = multiprocessing.Queue()
 
         # Many myo data collection process - same as in data_collection.py
-        self.p_myo = multiprocessing.Process(target=worker_myo, args=(self.q_myo, self.q_myo_imu, self.q_terminate, self.q_myo_ready, ))
+        self.p_myo = multiprocessing.Process(
+            target=worker_myo,
+            args=(
+                self.q_myo,
+                self.q_myo_imu,
+                self.q_terminate,
+                self.q_myo_ready,
+            ),
+        )
         # Custom myo receiver process
-        self.p_myo_receiver = multiprocessing.Process(target=worker_myo_receiver, args=(self.q_myo, self.q_myo_imu, self.q_terminate, ))
-        self.p_inference_visualiser_bridge = multiprocessing.Process(target=worker_inference_res_to_visualiser, args=(self.q_terminate, ))
+        self.p_myo_receiver = multiprocessing.Process(
+            target=worker_myo_receiver,
+            args=(
+                self.q_myo,
+                self.q_terminate,
+            ),
+        )
+        self.p_inference_visualiser_bridge = multiprocessing.Process(
+            target=worker_inference_res_to_visualiser, args=(self.q_terminate,)
+        )
 
         self.p_myo.start()
         self.p_myo_receiver.start()
         self.p_inference_visualiser_bridge.start()
 
-        repeating_timer = helpers.RepeatedTimer(0.1, self.check_terminate_live_inference)
+        repeating_timer = helpers.RepeatedTimer(
+            0.1, self.check_terminate_live_inference
+        )
 
         # Visualiser to front
         show_visualisation()
 
     def stop_inference(self):
         self.should_terminate_live_inference = True
-
-
 
 
 class InferenceFrame(tk.Frame):
@@ -212,8 +271,13 @@ class InferenceFrame(tk.Frame):
     def create_widgets(self):
         top_frame = tk.Frame(self, bg=self.root.colour_config["bg"])
         top_frame.pack(fill=tk.X)
-        tk.Label(top_frame, text="Inference", font=(FONT, 20), bg=self.root.colour_config["bg"],
-                 fg=self.root.colour_config["fg"]).pack()
+        tk.Label(
+            top_frame,
+            text="Inference",
+            font=(FONT, 20),
+            bg=self.root.colour_config["bg"],
+            fg=self.root.colour_config["fg"],
+        ).pack()
 
         # Create two frames for the two columns
         left_frame = tk.Frame(self, name="testoo", bg=self.root.colour_config["bg"])
@@ -221,14 +285,14 @@ class InferenceFrame(tk.Frame):
 
         # Left frame is inference from file, right frame is inference from live data
         self.inference_from_file = InferenceFromFile(left_frame, self.root, self)
-        self.inference_from_file.pack(fill='both', expand=True)
+        self.inference_from_file.pack(fill="both", expand=True)
 
         self.inference_from_live = InferenceFromLive(right_frame, self.root, self)
-        self.inference_from_live.pack(fill='both', expand=True)
+        self.inference_from_live.pack(fill="both", expand=True)
 
         # Pack the frames side by side
-        left_frame.pack(side='left', fill='both', expand=True)
-        right_frame.pack(side='right', fill='both', expand=True)
+        left_frame.pack(side="left", fill="both", expand=True)
+        right_frame.pack(side="right", fill="both", expand=True)
 
     def switch_to_inference_from_file(self, file_path):
         # self.root.notebook.select(1)

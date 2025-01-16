@@ -10,6 +10,7 @@ import tkinter.messagebox as msgbox
 from tkinter import LEFT, ttk
 
 import numpy as np
+import psutil
 import send2trash
 
 import helpers
@@ -60,18 +61,29 @@ def visualiser_process(q_visualiser):
         cwd=VISUALISER_PATH,
         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
         shell=True,
+        stdin=subprocess.PIPE,
     )
 
     # Wait for the visualiser to be ready
     while q_visualiser.empty():
         time.sleep(0.3)
 
-    # Send ctrl+c and y to the visualiser process
     proc.send_signal(signal.CTRL_BREAK_EVENT)
     time.sleep(0.1)
-    proc.send_signal(signal.CTRL_BREAK_EVENT)
+    proc.stdin.write(b"Y\n")
+    time.sleep(0.1)
 
-    proc.kill()
+    # Kill node process
+    for proc in psutil.process_iter():
+        # check whether the process name matches
+        if proc.name() == "node.exe":
+            proc.terminate()
+            time.sleep(0.2)
+
+    for proc in psutil.process_iter():
+        # check whether the process name matches
+        if proc.name() == "node.exe":
+            proc.kill()
 
     return
 

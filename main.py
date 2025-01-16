@@ -1,31 +1,34 @@
-import os
 import ctypes
+import os
 import subprocess
+import time
 import tkinter as tk
 from tkinter import ttk
 
-from PIL import ImageTk
+import psutil
 from cefpython3 import cefpython as cef
+from PIL import ImageTk
 
-from components.VerticallyScrolledFrame import VerticalScrolledFrame
 from components.analysis.analysis import AnalysisFrame
 from components.gesture_detail import (
+    get_browser_open,
+    on_browser_window_close,
     p_visualiser,
     q_visualiser,
-    on_browser_window_close,
-    get_browser_open,
 )
-from inference.inference import InferenceFrame
 from components.session_detail import SessionDetail
 from components.sidebar import Sidebar
+from components.sonification import SonificationFrame
+from components.VerticallyScrolledFrame import VerticalScrolledFrame
 from config import (
-    FONT,
-    BG_COLOUR_LIGHT,
-    FG_COLOUR_LIGHT,
     BG_COLOUR_DARK,
+    BG_COLOUR_LIGHT,
     FG_COLOUR_DARK,
+    FG_COLOUR_LIGHT,
+    FONT,
 )
 from helpers import configure_recursively, get_total_number_of_datapoints
+from inference.inference import InferenceFrame
 
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
 
@@ -36,7 +39,7 @@ class App(tk.Tk):
 
         self.title("sEMG Manus Manager")
         self.iconbitmap("resources/tap.ico")
-        self.geometry("1500x800")
+        self.geometry("1500x1000")
         self.configure(
             bg=BG_COLOUR_LIGHT
         )  # Set the background color of the main window
@@ -59,7 +62,7 @@ class App(tk.Tk):
     def create_widgets(self):
         # Configure style for the notebook tab
         style = ttk.Style()
-        style.configure("TNotebook.Tab", padding=[200, 2])
+        style.configure("TNotebook.Tab", padding=[100, 2])
         # Make frame background white
         style.configure("TFrame", background=self.colour_config["bg"])
 
@@ -70,11 +73,13 @@ class App(tk.Tk):
         tab1_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
         tab2_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
         tab3_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
+        # tab4_frame = tk.Frame(self.notebook, bg=self.colour_config["bg"])
 
         # Add frames to notebook as individual tabs
         self.notebook.add(tab1_frame, text="Data Collection")
-        self.notebook.add(tab2_frame, text="Inference")
-        self.notebook.add(tab3_frame, text="Analysis")
+        self.notebook.add(tab2_frame, text="Analysis")
+        self.notebook.add(tab3_frame, text="Inference")
+        # self.notebook.add(tab4_frame, text="Sonification")
 
         # DATA COLLECTION TAB
         self.sidebar = Sidebar(self, tab1_frame, self.load_user_data)
@@ -83,18 +88,21 @@ class App(tk.Tk):
         self.detail_frame = VerticalScrolledFrame(tab1_frame)
         self.detail_frame.pack(fill=tk.BOTH, expand=True)
 
+        # ANALYSIS TAB
+        self.analysis_frame = AnalysisFrame(tab2_frame, self)
+        self.analysis_frame.pack(fill=tk.BOTH, expand=True)
+
         # INFERENCE TAB
-        self.inference_frame = InferenceFrame(tab2_frame, self)
+        self.inference_frame = InferenceFrame(tab3_frame, self)
         self.inference_frame.pack(fill=tk.BOTH, expand=True)
 
-        # ANALYSIS TAB
-        self.analysis_frame = AnalysisFrame(tab3_frame, self)
-        self.analysis_frame.pack(fill=tk.BOTH, expand=True)
+        # self.soni_frame = SonificationFrame(tab4_frame, self)
+        # self.soni_frame.pack(fill=tk.BOTH, expand=True)
 
         self.notebook.pack(fill=tk.BOTH, expand=True)
 
         # Switch to analysis tab
-        self.notebook.select(0)
+        self.notebook.select(1)
 
     def update_total_datapoints(self):
         self.datapoints.set(
@@ -151,7 +159,8 @@ class App(tk.Tk):
 
         tk.Label(
             self.detail_frame.interior,
-            text=f"User {user_id} - {user_name}",
+            # text=f"User {user_id} - {user_name}",
+            text=f"User {user_id}",
             font=(FONT, 20),
             bg=self.colour_config["bg"],
             fg=self.colour_config["fg"],
@@ -269,4 +278,15 @@ if __name__ == "__main__":
     app.mainloop()
 
     # Kill process by name
-    os.system("taskkill /f /im SDKClient.exe")
+    # os.system("taskkill /f /im SDKClient.exe")
+
+    for proc in psutil.process_iter():
+        # check whether the process name matches
+        if proc.name() == "SDKClient.exe":
+            proc.terminate()
+            time.sleep(0.2)
+
+    # for proc in psutil.process_iter():
+    #     # check whether the process name matches
+    #     if proc.name() == "SDKClient.exe":
+    #         proc.kill()
