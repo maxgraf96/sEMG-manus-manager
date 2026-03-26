@@ -6,8 +6,12 @@ import tkinter as tk
 from tkinter import ttk
 
 import psutil
-from cefpython3 import cefpython as cef
 from PIL import ImageTk
+
+try:
+    from cefpython3 import cefpython as cef
+except ImportError:
+    cef = None
 
 from components.analysis.analysis import AnalysisFrame
 from components.gesture_detail import (
@@ -23,14 +27,20 @@ from components.VerticallyScrolledFrame import VerticalScrolledFrame
 from config import (
     BG_COLOUR_DARK,
     BG_COLOUR_LIGHT,
+    ensure_user_data_dir,
     FG_COLOUR_DARK,
     FG_COLOUR_LIGHT,
     FONT,
+    get_user_data_path,
 )
 from helpers import configure_recursively, get_total_number_of_datapoints
 from inference.inference import InferenceFrame
 
-ctypes.windll.shcore.SetProcessDpiAwareness(1)
+if os.name == "nt":
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
 
 
 class App(tk.Tk):
@@ -70,8 +80,9 @@ class App(tk.Tk):
         self.create_status_bar()
         self.create_widgets()
 
-        cef.DpiAware.EnableHighDpiSupport()
-        cef.Initialize()
+        if cef is not None:
+            cef.DpiAware.EnableHighDpiSupport()
+            cef.Initialize()
 
     def create_widgets(self):
         # Configure style for the notebook tab
@@ -180,7 +191,9 @@ class App(tk.Tk):
             fg=self.colour_config["fg"],
         ).pack(pady=(10, 0))
 
-        user_folder = os.path.join("user_data", f"u_{user_id}")
+        user_folder = get_user_data_path(f"u_{user_id}")
+        if not os.path.isdir(user_folder):
+            return
         session_folders = [
             folder for folder in os.listdir(user_folder) if folder.startswith("s_")
         ]
@@ -207,7 +220,9 @@ class App(tk.Tk):
         new_session_button.pack(ipadx=20, pady=10)
 
     def create_new_session(self, user_id):
-        user_folder = os.path.join("user_data", f"u_{user_id}")
+        ensure_user_data_dir()
+        user_folder = get_user_data_path(f"u_{user_id}")
+        os.makedirs(user_folder, exist_ok=True)
         existing_sessions = [
             folder for folder in os.listdir(user_folder) if folder.startswith("s_")
         ]
@@ -265,7 +280,8 @@ class App(tk.Tk):
             # Close the browser window
             on_browser_window_close()
 
-        cef.Shutdown()
+        if cef is not None:
+            cef.Shutdown()
         q_visualiser.put("terminate")
         if p_visualiser is not None:
             p_visualiser.wait()

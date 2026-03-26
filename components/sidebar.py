@@ -3,7 +3,7 @@ import tkinter as tk
 import tkinter.messagebox as msgbox
 from tkinter import simpledialog, ttk
 
-from config import FONT
+from config import FONT, ensure_user_data_dir, get_user_data_path, user_data_dir_exists
 
 
 class Sidebar(tk.Frame):
@@ -62,8 +62,13 @@ class Sidebar(tk.Frame):
     def load_users(self):
         # Load user IDs from the user_data directory
         self.listbox.delete(0, tk.END)  # Clear existing entries
+        if not user_data_dir_exists():
+            return
+
         user_folders = [
-            folder for folder in os.listdir("user_data") if folder.startswith("u_")
+            folder
+            for folder in os.listdir(get_user_data_path())
+            if folder.startswith("u_")
         ]
         for folder in sorted(user_folders, key=lambda x: int(x.split("_")[1])):
             user_id = folder.split("_")[1]
@@ -72,7 +77,7 @@ class Sidebar(tk.Frame):
             self.listbox.insert(tk.END, f"ID {user_id}")
 
     def get_user_name(self, folder):
-        name_path = os.path.join("user_data", folder, "name.txt")
+        name_path = get_user_data_path(folder, "name.txt")
         if os.path.exists(name_path):
             with open(name_path, "r") as name_file:
                 return name_file.read().strip()
@@ -102,15 +107,19 @@ class Sidebar(tk.Frame):
 
     def get_next_user_id(self):
         # Logic to find the next available user ID
+        if not user_data_dir_exists():
+            return 0
+
         existing_ids = [
             int(folder[2:])
-            for folder in os.listdir("user_data")
+            for folder in os.listdir(get_user_data_path())
             if folder.startswith("u_")
         ]
         return 0 if not existing_ids else max(existing_ids) + 1
 
     def create_new_user_folder(self, user_id, user_name):
-        new_user_path = os.path.join("user_data", f"u_{user_id}")
+        ensure_user_data_dir()
+        new_user_path = get_user_data_path(f"u_{user_id}")
         if not os.path.exists(new_user_path):
             os.makedirs(new_user_path)
             with open(os.path.join(new_user_path, "name.txt"), "w") as name_file:

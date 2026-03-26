@@ -6,8 +6,8 @@ from tkinter import RIGHT
 import send2trash
 
 from components.gesture_detail import GestureDetail
+from config import FONT, get_user_data_path
 from constants import GESTURES
-from config import FONT
 
 
 class SessionDetail(tk.Frame):
@@ -58,7 +58,9 @@ class SessionDetail(tk.Frame):
         # Ask for confirmation
         if msgbox.askyesno("Delete Session", f"Are you sure you want to delete session {self.session_id}?"):
             # Delete the session folder
-            session_folder = os.path.join('user_data', f'u_{self.user_id}', f's_{self.session_id}')
+            session_folder = get_user_data_path(
+                f"u_{self.user_id}", f"s_{self.session_id}"
+            )
             if os.path.exists(session_folder):
                 send2trash.send2trash(session_folder)
 

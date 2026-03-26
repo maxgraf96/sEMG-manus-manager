@@ -12,7 +12,7 @@ from sklearn.decomposition import PCA
 import tkinter.messagebox as msgbox
 from tkinter import ttk
 
-from config import FONT
+from config import FONT, get_user_data_path
 from constants import (
     NUM_FEATURES_PER_SAMPLE,
     DATA_LEN,
@@ -360,7 +360,7 @@ class AnalysisFrame(tk.Frame):
     # Function to parse the directory structure and populate the 3 listboxes
     # ------------------------------------------------------------------
     def populate_data_selections(self):
-        base_dir = "user_data"
+        base_dir = get_user_data_path()
         # Parse for all users, sessions, speeds
         users, sessions, gestures = parse_user_data_structure(base_dir)
 
@@ -623,7 +623,7 @@ class AnalysisFrame(tk.Frame):
 # Updated load_all_files with user/session/speed filters
 # ------------------------------------------------------------------
 def load_all_files(
-    dir="user_data",
+    dir=None,
     data_len=DATA_LEN,
     progressbar=None,
     selected_users=None,
@@ -631,6 +631,9 @@ def load_all_files(
     selected_gestures=None,
     selected_speeds=None,
 ):
+    if dir is None:
+        dir = get_user_data_path()
+
     data_recordings = []
     users = []
     sessions = []
@@ -647,22 +650,19 @@ def load_all_files(
     if selected_speeds is None:
         selected_speeds = []
 
-    # Walk user_data directory
+    if not os.path.isdir(dir):
+        return [], [], [], [], [], []
+
+    # Walk configured user data directory
     for root, dirs, files in os.walk(dir):
         for filename in files:
             if filename.endswith(".csv"):
-                # We make a decision about whether this file belongs to a user, session, speed
-                # Example assumption:
-                # Path might look like: user_data/<user>/<session>/<speed>/<gestureType>/some_file.csv
-                # Adjust your logic to match your actual directory structure
-                path_parts = root.split(os.sep)
+                relative_root = os.path.relpath(root, dir)
+                path_parts = relative_root.split(os.sep)
 
-                # Very naive approach: we guess indexes for user, session, speed
-                # E.g. path_parts = ['user_data', 'userA', 'session_01', 'fast', 'grasp']
-                # Just be sure your structure is consistent
-                user_part = path_parts[1] if len(path_parts) > 1 else None
-                session_part = path_parts[2] if len(path_parts) > 2 else None
-                gesture_part = path_parts[3] if len(path_parts) > 3 else None
+                user_part = path_parts[0] if len(path_parts) > 0 else None
+                session_part = path_parts[1] if len(path_parts) > 1 else None
+                gesture_part = path_parts[2] if len(path_parts) > 2 else None
                 speed = filename.split("_")[1]
 
                 # Filter check
@@ -682,7 +682,7 @@ def load_all_files(
                 users.append(user_part)
                 sessions.append(session_part)
                 # The last folder might be the gesture label
-                gesture_label = path_parts[-1]  # e.g. 'grasp'
+                gesture_label = path_parts[-1]  # e.g. 'g_fist'
                 gesture_types.append(gesture_label)
                 speeds.append(speed)
 
@@ -748,15 +748,21 @@ def parse_user_data_structure(base_dir="user_data"):
     sessions = set()
     gestures = set()
 
+    if not os.path.isdir(base_dir):
+        return users, sessions, gestures
+
     for root, dirs, files in os.walk(base_dir):
-        # We assume path: user_data/<user>/<session>/<speed>/<gestureType>
-        path_parts = root.split(os.sep)
+        relative_root = os.path.relpath(root, base_dir)
+        if relative_root == ".":
+            continue
+
+        path_parts = relative_root.split(os.sep)
+        if len(path_parts) > 0:
+            users.add(path_parts[0])
         if len(path_parts) > 1:
-            users.add(path_parts[1])
+            sessions.add(path_parts[1])
         if len(path_parts) > 2:
-            sessions.add(path_parts[2])
-        if len(path_parts) > 3:
-            gestures.add(path_parts[3])
+            gestures.add(path_parts[2])
 
     return users, sessions, gestures
 

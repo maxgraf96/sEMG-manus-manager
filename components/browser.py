@@ -1,9 +1,17 @@
 import tkinter as tk
 from tkinter import *
-from cefpython3 import cefpython as cef
 import ctypes
 
-from cefpython3.examples.tkinter_ import WINDOWS
+try:
+    from cefpython3 import cefpython as cef
+    from cefpython3.examples.tkinter_ import WINDOWS
+except ImportError:
+    cef = None
+    WINDOWS = False
+
+
+def browser_backend_available():
+    return cef is not None
 
 
 class BrowserFrame(tk.Frame):
@@ -22,6 +30,10 @@ class BrowserFrame(tk.Frame):
 
     # URLURLURL
     def embed_browser(self, url):
+        if cef is None:
+            raise RuntimeError(
+                "Embedded browser support is unavailable because cefpython3 is not installed."
+            )
         window_info = cef.WindowInfo()
         # rect = [0, 0, self.winfo_width(), self.winfo_height()]
         rect = [0, 0, 800, 600]

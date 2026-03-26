@@ -14,9 +14,9 @@ import psutil
 import send2trash
 
 import helpers
-from components.browser import BrowserFrame
+from components.browser import BrowserFrame, browser_backend_available
 from components.emg_inspector import EMGInspectorWindow
-from config import FONT, VISUALISER_PATH
+from config import FONT, VISUALISER_PATH, get_user_data_path
 from constants import XRMI_GESTURES, DATA_CSV_HEADER_STR
 from helpers import RepeatedTimer
 from networking import netz_connector
@@ -89,6 +89,11 @@ def visualiser_process(q_visualiser):
 
 
 def open_browser_window(url):
+    if not browser_backend_available():
+        raise RuntimeError(
+            "Embedded browser support is unavailable because cefpython3 is not installed."
+        )
+
     # Create a new top-level window
     global browser_window, browser_frame
     browser_window = tk.Toplevel()
@@ -121,6 +126,13 @@ def show_visualisation():
     """
 
     global p_visualiser, q_visualiser, is_browser_open, browser_window
+    if not browser_backend_available():
+        msgbox.showerror(
+            "Browser backend unavailable",
+            "The embedded browser feature requires cefpython3, which is not available in the Python 3.11 environment.",
+        )
+        return
+
     # Check if the visualiser process is already running
     if p_visualiser is None:
         print("No visualiser process running, starting a new one.")
@@ -276,11 +288,8 @@ class GestureDetail(tk.Frame):
 
     def load_recordings(self):
         # Get the session folder path
-        gesture_folder = os.path.join(
-            "user_data",
-            f"u_{self.user_id}",
-            f"s_{self.session_id}",
-            f"g_{self.gesture}",
+        gesture_folder = get_user_data_path(
+            f"u_{self.user_id}", f"s_{self.session_id}", f"g_{self.gesture}"
         )
 
         # Clear the existing recordings listbox
@@ -319,12 +328,8 @@ class GestureDetail(tk.Frame):
             + ".csv"
         )
         # Get full absolute path
-        filename = os.path.join(
-            "user_data",
-            f"u_{self.user_id}",
-            f"s_{self.session_id}",
-            f"g_{self.gesture}",
-            filename,
+        filename = get_user_data_path(
+            f"u_{self.user_id}", f"s_{self.session_id}", f"g_{self.gesture}", filename
         )
 
         # Extract hand pose data from the selected recording - this must be in the same format as the inference results.
@@ -347,11 +352,8 @@ class GestureDetail(tk.Frame):
         if not selected_index:
             return
         # Get the session folder path
-        session_folder = os.path.join(
-            "user_data",
-            f"u_{self.user_id}",
-            f"s_{self.session_id}",
-            f"g_{self.gesture}",
+        session_folder = get_user_data_path(
+            f"u_{self.user_id}", f"s_{self.session_id}", f"g_{self.gesture}"
         )
         # Get the selected filename
         selected_filename = self.recordings_listbox.get(selected_index[0]) + ".csv"
@@ -503,11 +505,8 @@ class GestureDetail(tk.Frame):
                 now = datetime.datetime.now().strftime("%d_%m_%Y_%H_%M_%S")
                 recording_filename = f"recording_{speed}_{now}.csv"
                 # Get the session folder path
-                session_folder = os.path.join(
-                    "user_data",
-                    f"u_{self.user_id}",
-                    f"s_{self.session_id}",
-                    f"g_{self.gesture}",
+                session_folder = get_user_data_path(
+                    f"u_{self.user_id}", f"s_{self.session_id}", f"g_{self.gesture}"
                 )
                 # Create the recording file
                 recording_path = os.path.join(session_folder, recording_filename)
@@ -558,11 +557,8 @@ class GestureDetail(tk.Frame):
         if not selected_index:
             return None
         # Get the session folder path
-        session_folder = os.path.join(
-            "user_data",
-            f"u_{self.user_id}",
-            f"s_{self.session_id}",
-            f"g_{self.gesture}",
+        session_folder = get_user_data_path(
+            f"u_{self.user_id}", f"s_{self.session_id}", f"g_{self.gesture}"
         )
         # Get the selected filename
         selected_filename = self.recordings_listbox.get(selected_index[0]) + ".csv"
@@ -583,11 +579,8 @@ class GestureDetail(tk.Frame):
                 f"Are you sure you want to delete recording {selected_filename}?",
             ):
                 # Delete the csv file
-                session_folder = os.path.join(
-                    "user_data",
-                    f"u_{self.user_id}",
-                    f"s_{self.session_id}",
-                    f"g_{self.gesture}",
+                session_folder = get_user_data_path(
+                    f"u_{self.user_id}", f"s_{self.session_id}", f"g_{self.gesture}"
                 )
                 send2trash.send2trash(os.path.join(session_folder, selected_filename))
                 # os.remove(os.path.join(session_folder, selected_filename))

@@ -10,7 +10,7 @@ import zmq
 
 import helpers
 from components import gesture_detail
-from config import FONT
+from config import FONT, get_user_data_path
 from constants import FEATURE_VECTOR_DIM
 from inference.worker_inference import (
     worker_myo_receiver,
@@ -34,7 +34,7 @@ class InferenceFromFile(tk.Frame):
 
     def browse(self):
         f_path = askopenfilename(
-            initialdir="./user_data",
+            initialdir=get_user_data_path(),
             title="Select File",
             filetypes=(("CSV Files", "*.csv*"), ("All Files", "*.*")),
         )

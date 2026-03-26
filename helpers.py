@@ -7,6 +7,7 @@ import tempfile
 import numpy as np
 import pandas as pd
 
+from config import get_user_data_path, user_data_dir_exists
 from constants import FEATURE_VECTOR_DIM, MANUS_LABEL_INDICES, NUM_FEATURES_PER_SAMPLE
 
 excluded_elements = ["delete_session_button", "theme_toggle_button"]
@@ -45,8 +46,12 @@ def configure_recursively(widget, config):
 def get_total_number_of_datapoints():
     # Get the total number of datapoints
     total_no_files = 0
-    for user_folder in os.listdir("user_data"):
-        user_folder_path = os.path.join("user_data", user_folder)
+    if not user_data_dir_exists():
+        return 0
+
+    user_data_dir = get_user_data_path()
+    for user_folder in os.listdir(user_data_dir):
+        user_folder_path = os.path.join(user_data_dir, user_folder)
         for session_folder in os.listdir(user_folder_path):
             session_folder_path = os.path.join(user_folder_path, session_folder)
             if not os.path.isdir(session_folder_path):
