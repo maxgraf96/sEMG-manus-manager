@@ -52,6 +52,8 @@ def get_total_number_of_datapoints():
     user_data_dir = get_user_data_path()
     for user_folder in os.listdir(user_data_dir):
         user_folder_path = os.path.join(user_data_dir, user_folder)
+        if not os.path.isdir(user_folder_path):
+            continue
         for session_folder in os.listdir(user_folder_path):
             session_folder_path = os.path.join(user_folder_path, session_folder)
             if not os.path.isdir(session_folder_path):
