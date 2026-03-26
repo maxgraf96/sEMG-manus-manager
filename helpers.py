@@ -178,29 +178,60 @@ def create_visualiser_csv(data):
                 "Pinky_TIP_Z",
             ]
         )
+        expected_dim = 20
+        has_warned_about_dim = False
+
         for i in range(data.shape[1]):
             current_row = list(data[0][i])
+            mapped_row = [0.0] * expected_dim
 
-            thumb_spread = current_row[0]
-            thumb_mcp = current_row[1]
-            thumb_pip = current_row[2]
-            thumb_dip = current_row[3]
-            index_spread = current_row[4]
-            index_mcp = current_row[5]
-            index_pip = current_row[6]
-            index_dip = current_row[7]
-            middle_spread = current_row[8]
-            middle_mcp = current_row[9]
-            middle_pip = current_row[10]
-            middle_dip = current_row[11]
-            ring_spread = current_row[12]
-            ring_mcp = current_row[13]
-            ring_pip = current_row[14]
-            ring_dip = current_row[15]
-            pinky_spread = current_row[16]
-            pinky_mcp = current_row[17]
-            pinky_pip = current_row[18]
-            pinky_dip = current_row[19]
+            if len(current_row) == len(MANUS_LABEL_INDICES):
+                for value, label_idx in zip(current_row, MANUS_LABEL_INDICES):
+                    if 0 <= label_idx < expected_dim:
+                        mapped_row[label_idx] = value
+            elif len(current_row) == 16:
+                # Current mamba-emg model excludes thumb and predicts index..pinky (16 values).
+                inferred_label_indices = list(range(4, expected_dim))
+                for value, label_idx in zip(current_row, inferred_label_indices):
+                    mapped_row[label_idx] = value
+            else:
+                # Fallback for unexpected model dims: map what we can and leave the rest as zeros.
+                for idx, value in enumerate(current_row[:expected_dim]):
+                    mapped_row[idx] = value
+
+            if len(current_row) != expected_dim and not has_warned_about_dim:
+                if len(current_row) == 16:
+                    print(
+                        "Warning: received 16 output values for visualiser CSV. "
+                        "Assuming model outputs index..pinky only; thumb joints will be zero-filled."
+                    )
+                else:
+                    print(
+                        "Warning: expected 20 output values for visualiser CSV, "
+                        f"received {len(current_row)}. Missing joints will be zero-filled."
+                    )
+                has_warned_about_dim = True
+
+            thumb_spread = mapped_row[0]
+            thumb_mcp = mapped_row[1]
+            thumb_pip = mapped_row[2]
+            thumb_dip = mapped_row[3]
+            index_spread = mapped_row[4]
+            index_mcp = mapped_row[5]
+            index_pip = mapped_row[6]
+            index_dip = mapped_row[7]
+            middle_spread = mapped_row[8]
+            middle_mcp = mapped_row[9]
+            middle_pip = mapped_row[10]
+            middle_dip = mapped_row[11]
+            ring_spread = mapped_row[12]
+            ring_mcp = mapped_row[13]
+            ring_pip = mapped_row[14]
+            ring_dip = mapped_row[15]
+            pinky_spread = mapped_row[16]
+            pinky_mcp = mapped_row[17]
+            pinky_pip = mapped_row[18]
+            pinky_dip = mapped_row[19]
 
             writer.writerow(
                 [

@@ -39,7 +39,21 @@ class App(tk.Tk):
 
         self.title("sEMG Manus Manager")
         self.iconbitmap("resources/tap.ico")
-        self.geometry("1500x1000")
+        w = 1500  # width for the Tk root
+        h = 1000  # height for the Tk root
+
+        # get screen width and height
+        ws = self.winfo_screenwidth()  # width of the screen
+        hs = self.winfo_screenheight()  # height of the screen
+
+        # calculate x and y coordinates for the Tk root window
+        x = (ws / 2) - (w / 2)
+        y = (hs / 2) - (h / 2)
+
+        # set the dimensions of the screen
+        # and where it is placed
+        self.geometry("%dx%d+%d+%d" % (w, h, x, y))
+        # self.geometry("1500x1000")
         self.configure(
             bg=BG_COLOUR_LIGHT
         )  # Set the background color of the main window
@@ -159,8 +173,8 @@ class App(tk.Tk):
 
         tk.Label(
             self.detail_frame.interior,
-            # text=f"User {user_id} - {user_name}",
-            text=f"User {user_id}",
+            text=f"User {user_id} - {user_name}",
+            # text=f"User {user_id}",
             font=(FONT, 20),
             bg=self.colour_config["bg"],
             fg=self.colour_config["fg"],

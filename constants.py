@@ -84,13 +84,5 @@ header_fingers = [
     "pinky_dip",
 ]
 header_hand_rotation = ["wrist_quat_x", "wrist_quat_y", "wrist_quat_z", "wrist_quat_w"]
-DATA_CSV_HEADER_STR = (
-    header_emg
-    + ","
-    + ",".join(header_imu)
-    + ","
-    + ",".join(header_fingers)
-    + ","
-    + ",".join(header_hand_rotation)
-)
+DATA_CSV_HEADER_STR = header_emg + "," + ",".join(header_imu) + "," + ",".join(header_fingers) + "," + ",".join(header_hand_rotation)
 DATA_CSV_HEADER_LIST = DATA_CSV_HEADER_STR.split(",")

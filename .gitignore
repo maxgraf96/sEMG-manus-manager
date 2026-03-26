@@ -5,6 +5,8 @@ __pycache__/
 
 # C extensions
 *.so
+*.onnx
+*.csv
 
 # Distribution / packaging
 .Python
