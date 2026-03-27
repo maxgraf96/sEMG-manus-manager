@@ -21,10 +21,6 @@ This application is also the recording/inspection companion for the published sE
 - Open Recordings: Open individual recordings for analysis using external tools.
 - Start New Recordings: Start new recordings and save them to user's session folder.
 
-## Screenshot
-
-![screen.png](resources%2Fscreen.png)
-
 ## Requirements
 
 - Python 3.11
