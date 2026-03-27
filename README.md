@@ -1,8 +1,18 @@
 # sEMG Manus Manager
 
-![screen.png](resources%2Fscreen.png)
+sEMG Manus Manager is a graphical application made to record, manage and analyse data from the Manus gloves and Thalmic Labs Myo sEMG devices.
 
-sEMG Manus Manager is a graphical application made to record, manage and analyze data from the Manus gloves and Thalmic Labs Myo sEMG devices.
+This application is also the recording/inspection companion for the published sEMG-MANUS dataset: synchronised Myo sEMG and MANUS finger-joint recordings for hand pose estimation and XR musical interaction.
+
+## Related Dataset
+
+- Zenodo dataset DOI: [`10.5281/zenodo.19261324`](https://doi.org/10.5281/zenodo.19261324)
+- Zenodo record: [`zenodo.org/records/19261324`](https://zenodo.org/records/19261324)
+- Dataset companion repository: [`maxgraf96/sEMG-manus-dataset`](https://github.com/maxgraf96/sEMG-manus-dataset)
+- Published release scope: 18 participant folders, 22 gestures, 3108 CSV recordings after cleanup
+- Recommended benchmark cohort: 15 participants (`u_3` to `u_16` and `u_18`)
+- Incomplete participants to exclude from balanced between-user analyses unless partial-data handling is intentional: `u_1`, `u_2`, `u_17`
+- Per-recording CSV schema: 42 columns comprising 8 Myo sEMG channels, 10 Myo IMU channels, 20 MANUS finger-joint channels, and 4 wrist quaternion channels
 
 ## Features
 
@@ -10,6 +20,10 @@ sEMG Manus Manager is a graphical application made to record, manage and analyze
 - Recordings List: View a list of recordings for a selected session.
 - Open Recordings: Open individual recordings for analysis using external tools.
 - Start New Recordings: Start new recordings and save them to user's session folder.
+
+## Screenshot
+
+![screen.png](resources%2Fscreen.png)
 
 ## Requirements
 
