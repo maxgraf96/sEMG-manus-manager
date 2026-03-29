@@ -101,9 +101,7 @@ def create_visualiser_csv(data):
     :return: A path to a temporary csv file matching the following format: Frame,Hand_X,Hand_Y,Hand_Z,Thumb_CMC_X,Thumb_CMC_Y,Thumb_CMC_Z,Thumb_MCP_X,Thumb_MCP_Y,Thumb_MCP_Z,Thumb_DIP_X,Thumb_DIP_Y,Thumb_DIP_Z,Thumb_TIP_X,Thumb_TIP_Y,Thumb_TIP_Z,Index_CMC_X,Index_CMC_Y,Index_CMC_Z,Index_MCP_X,Index_MCP_Y,Index_MCP_Z,Index_PIP_X,Index_PIP_Y,Index_PIP_Z,Index_DIP_X,Index_DIP_Y,Index_DIP_Z,Index_TIP_X,Index_TIP_Y,Index_TIP_Z,Middle_CMC_X,Middle_CMC_Y,Middle_CMC_Z,Middle_MCP_X,Middle_MCP_Y,Middle_MCP_Z,Middle_PIP_X,Middle_PIP_Y,Middle_PIP_Z,Middle_DIP_X,Middle_DIP_Y,Middle_DIP_Z,Middle_TIP_X,Middle_TIP_Y,Middle_TIP_Z,Ring_CMC_X,Ring_CMC_Y,Ring_CMC_Z,Ring_MCP_X,Ring_MCP_Y,Ring_MCP_Z,Ring_PIP_X,Ring_PIP_Y,Ring_PIP_Z,Ring_DIP_X,Ring_DIP_Y,Ring_DIP_Z,Ring_TIP_X,Ring_TIP_Y,Ring_TIP_Z,Pinky_CMC_X,Pinky_CMC_Y,Pinky_CMC_Z,Pinky_MCP_X,Pinky_MCP_Y,Pinky_MCP_Z,Pinky_PIP_X,Pinky_PIP_Y,Pinky_PIP_Z,Pinky_DIP_X,Pinky_DIP_Y,Pinky_DIP_Z,Pinky_TIP_X,Pinky_TIP_Y,Pinky_TIP_Z
     """
 
-    with tempfile.NamedTemporaryFile(
-        mode="w", delete=False, suffix=".csv", newline=""
-    ) as temp_csv:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".csv", newline="") as temp_csv:
         writer = csv.writer(temp_csv)
         writer.writerow(
             [
@@ -197,7 +195,7 @@ def create_visualiser_csv(data):
                     if 0 <= label_idx < expected_dim:
                         mapped_row[label_idx] = value
             elif len(current_row) == 16:
-                # Current mamba-emg model excludes thumb and predicts index..pinky (16 values).
+                # Case that current mamba-inference model excludes thumb and predicts index..pinky (16 values) - just for testing purposes.
                 inferred_label_indices = list(range(4, expected_dim))
                 for value, label_idx in zip(current_row, inferred_label_indices):
                     mapped_row[label_idx] = value
@@ -208,15 +206,9 @@ def create_visualiser_csv(data):
 
             if len(current_row) != expected_dim and not has_warned_about_dim:
                 if len(current_row) == 16:
-                    print(
-                        "Warning: received 16 output values for visualiser CSV. "
-                        "Assuming model outputs index..pinky only; thumb joints will be zero-filled."
-                    )
+                    print("Warning: received 16 output values for visualiser CSV. Assuming model outputs index..pinky only; thumb joints will be zero-filled.")
                 else:
-                    print(
-                        "Warning: expected 20 output values for visualiser CSV, "
-                        f"received {len(current_row)}. Missing joints will be zero-filled."
-                    )
+                    print(f"Warning: expected 20 output values for visualiser CSV, received {len(current_row)}. Missing joints will be zero-filled.")
                 has_warned_about_dim = True
 
             thumb_spread = mapped_row[0]
@@ -349,26 +341,16 @@ def create_visualiser_csv(data):
         temp_csv.flush()
         os.fsync(temp_csv.fileno())
 
-    print(
-        "Created temp CSV file at "
-        + temp_csv.name
-        + " with "
-        + str(data.shape[1])
-        + " rows"
-    )
+    print("Created temp CSV file at " + temp_csv.name + " with " + str(data.shape[1]) + " rows")
 
     return temp_csv.name
 
 
 def update_visualiser_temp_file(temp_csv_path):
     # Delete all CSVs in the E:\Pycharm Projects 10\sEMG-manus-hand-renderer\resources\csvs folder
-    for file in os.listdir(
-        "E:\\Pycharm Projects 10\\sEMG-manus-hand-renderer\\resources\\csvs"
-    ):
+    for file in os.listdir("E:\\Pycharm Projects 10\\sEMG-manus-hand-renderer\\resources\\csvs"):
         if file.endswith(".csv"):
-            os.remove(
-                f"E:\\Pycharm Projects 10\\sEMG-manus-hand-renderer\\resources\\csvs\\{file}"
-            )
+            os.remove(f"E:\\Pycharm Projects 10\\sEMG-manus-hand-renderer\\resources\\csvs\\{file}")
 
     # Copy the temp file to E:\Pycharm Projects 10\sEMG-manus-hand-renderer\resources\csvs
     shutil.copy(
